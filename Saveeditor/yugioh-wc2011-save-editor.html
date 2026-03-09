@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YGO WC2011 Save Editor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap');
+  :root{
+    --gold:#c9a227;--gold-light:#f0d060;--gold-dark:#8a6a0a;
+    --red:#c0392b;--dark:#0a0a0f;--text:#e8e0c8;--text-dim:#8a8070;
+    --card-bg:linear-gradient(135deg,#1a1530 0%,#0e0e22 60%,#1a1030 100%);
+    --green:#27ae60;--green-dark:#1a6b3a;--purple:#8e44ad;--blue:#2980b9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--dark);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;
+    background-image:radial-gradient(ellipse at 20% 20%,rgba(201,162,39,0.05) 0%,transparent 50%),
+    repeating-linear-gradient(45deg,transparent,transparent 40px,rgba(201,162,39,0.015) 40px,rgba(201,162,39,0.015) 41px);}
+  .header{text-align:center;padding:26px 20px 16px;border-bottom:1px solid rgba(201,162,39,0.2);background:linear-gradient(180deg,rgba(10,5,20,0.95) 0%,transparent 100%);}
+  .header-eye{font-size:36px;line-height:1;margin-bottom:5px;filter:drop-shadow(0 0 12px rgba(201,162,39,0.6));}
+  .header h1{font-family:'Cinzel Decorative',serif;font-size:clamp(12px,4.5vw,18px);font-weight:700;background:linear-gradient(135deg,var(--gold-dark),var(--gold-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;}
+  .header-sub{font-family:'Cinzel',serif;font-size:11px;color:var(--text-dim);letter-spacing:4px;margin-top:3px;}
+  .drop-zone{margin:20px 16px;border:2px dashed rgba(201,162,39,0.35);border-radius:12px;padding:32px 20px;text-align:center;background:var(--card-bg);cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden;}
+  .drop-zone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(201,162,39,0.08) 0%,transparent 70%);opacity:0;transition:opacity 0.3s;}
+  .drop-zone:hover::before,.drop-zone.drag-over::before{opacity:1;}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--gold);box-shadow:0 0 20px rgba(201,162,39,0.2);}
+  .drop-icon{font-size:38px;display:block;margin-bottom:9px;}
+  .drop-title{font-family:'Cinzel',serif;font-size:15px;color:var(--gold);font-weight:600;margin-bottom:3px;}
+  .drop-sub{font-size:13px;color:var(--text-dim);}
+  #fileInput{display:none;}
+  .editor{display:none;padding:0 16px 40px;}
+  .editor.visible{display:block;}
+  .save-banner{background:linear-gradient(135deg,rgba(201,162,39,0.12),rgba(10,10,20,0.8));border:1px solid rgba(201,162,39,0.3);border-radius:10px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:11px;}
+  .save-banner-icon{font-size:26px;flex-shrink:0;}
+  .save-banner-name{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-light);font-weight:600;}
+  .save-banner-detail{font-size:12px;color:var(--text-dim);margin-top:2px;}
+  .section{background:var(--card-bg);border:1px solid rgba(201,162,39,0.2);border-radius:12px;margin-bottom:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
+  .section-header{background:linear-gradient(90deg,rgba(201,162,39,0.15),transparent);border-bottom:1px solid rgba(201,162,39,0.15);padding:10px 16px;display:flex;align-items:center;gap:10px;}
+  .section-icon{font-size:16px;}
+  .section-title{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:2px;}
+  .section-badge{margin-left:auto;font-family:'Rajdhani',sans-serif;font-size:11px;background:rgba(201,162,39,0.15);color:var(--gold-light);padding:2px 8px;border-radius:10px;font-weight:600;}
+  .section-body{padding:13px 16px;}
+  .field{margin-bottom:12px;}
+  .field:last-child{margin-bottom:0;}
+  .field-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:5px;display:block;}
+  .field-input{width:100%;background:rgba(0,0,0,0.4);border:1px solid rgba(201,162,39,0.25);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;padding:9px 14px;outline:none;transition:all 0.2s;-webkit-appearance:none;}
+  .field-input:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,162,39,0.15);}
+  .field-input[readonly]{background:rgba(0,0,0,0.2);color:var(--text-dim);border-color:rgba(201,162,39,0.1);cursor:not-allowed;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:8px;font-family:'Cinzel',serif;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;border:none;transition:all 0.2s;white-space:nowrap;text-transform:uppercase;}
+  .btn-gold{background:linear-gradient(135deg,var(--gold-dark),var(--gold),var(--gold-dark));color:#1a1000;box-shadow:0 2px 10px rgba(201,162,39,0.3);}
+  .btn-gold:active{transform:scale(0.97);}
+  .btn-green{background:linear-gradient(135deg,var(--green-dark),var(--green),var(--green-dark));color:#fff;}
+  .btn-green:active{transform:scale(0.97);}
+  .btn-purple{background:linear-gradient(135deg,#5b1f7c,var(--purple),#5b1f7c);color:#f0d0ff;}
+  .btn-purple:active{transform:scale(0.97);}
+  .btn-outline{background:transparent;color:var(--gold);border:1px solid rgba(201,162,39,0.4);}
+  .btn-block{width:100%;padding:12px;font-size:12px;letter-spacing:2px;border-radius:10px;}
+
+  /* QUICK GRID */
+  .quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .quick-btn{background:rgba(0,0,0,0.3);border:1px solid rgba(201,162,39,0.2);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .quick-btn:active{background:rgba(201,162,39,0.1);transform:scale(0.97);}
+  .quick-btn-icon{font-size:20px;}
+  .quick-btn-label{font-family:'Cinzel',serif;font-size:10px;color:var(--gold);font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+  .quick-btn-desc{font-size:10px;color:var(--text-dim);}
+
+  /* STATS */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px;}
+  .stat-box{background:rgba(0,0,0,0.3);border:1px solid rgba(201,162,39,0.15);border-radius:8px;padding:9px 5px;text-align:center;}
+  .stat-value{font-family:'Cinzel',serif;font-size:17px;font-weight:700;color:var(--gold-light);display:block;}
+  .stat-label{font-size:9px;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:1px;}
+
+  /* COLOR EDITOR */
+  .color-section{margin-bottom:14px;}
+  .color-row{display:flex;align-items:center;gap:12px;padding:10px;background:rgba(0,0,0,0.3);border:1px solid rgba(201,162,39,0.15);border-radius:10px;margin-bottom:8px;}
+  .color-row:last-child{margin-bottom:0;}
+  .color-preview{width:44px;height:44px;border-radius:8px;border:2px solid rgba(201,162,39,0.3);flex-shrink:0;cursor:pointer;position:relative;overflow:hidden;}
+  .color-preview input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;}
+  .color-info{flex:1;}
+  .color-name{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+  .color-hex{font-size:12px;color:var(--text-dim);margin-top:2px;font-family:monospace;}
+  .color-sliders{display:flex;flex-direction:column;gap:4px;flex:1;}
+  .slider-row{display:flex;align-items:center;gap:7px;}
+  .slider-label{font-size:10px;font-weight:700;width:10px;flex-shrink:0;}
+  .slider-label.r{color:#ff6060;}
+  .slider-label.g{color:#60ff60;}
+  .slider-label.b{color:#6090ff;}
+  .slider-wrap{flex:1;position:relative;}
+  input[type=range].rgb-slider{width:100%;height:18px;-webkit-appearance:none;background:transparent;outline:none;cursor:pointer;}
+  input[type=range].rgb-slider::-webkit-slider-track{height:8px;border-radius:4px;}
+  input[type=range].rgb-slider.rr::-webkit-slider-track{background:linear-gradient(90deg,#000,#ff0000);}
+  input[type=range].rgb-slider.gg::-webkit-slider-track{background:linear-gradient(90deg,#000,#00ff00);}
+  input[type=range].rgb-slider.bb::-webkit-slider-track{background:linear-gradient(90deg,#000,#0066ff);}
+  input[type=range].rgb-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid rgba(0,0,0,0.5);box-shadow:0 1px 4px rgba(0,0,0,0.5);}
+  input[type=range].rgb-slider::-moz-range-track{height:8px;border-radius:4px;}
+  input[type=range].rgb-slider.rr::-moz-range-track{background:linear-gradient(90deg,#000,#ff0000);}
+  input[type=range].rgb-slider.gg::-moz-range-track{background:linear-gradient(90deg,#000,#00ff00);}
+  input[type=range].rgb-slider.bb::-moz-range-track{background:linear-gradient(90deg,#000,#0066ff);}
+  input[type=range].rgb-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid rgba(0,0,0,0.5);}
+  .slider-val{font-size:11px;color:var(--text-dim);width:26px;text-align:right;flex-shrink:0;}
+
+  /* SELECTOR ROW */
+  .selector-row{display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(0,0,0,0.3);border:1px solid rgba(201,162,39,0.15);border-radius:10px;margin-bottom:8px;}
+  .selector-row:last-child{margin-bottom:0;}
+  .selector-label{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);font-weight:600;text-transform:uppercase;letter-spacing:1px;}
+  .selector-controls{display:flex;align-items:center;gap:8px;}
+  .sel-btn{background:rgba(201,162,39,0.15);border:1px solid rgba(201,162,39,0.3);border-radius:6px;color:var(--gold-light);width:28px;height:28px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;font-weight:700;}
+  .sel-btn:active{background:rgba(201,162,39,0.3);}
+  .sel-value{font-family:'Cinzel',serif;font-size:14px;font-weight:700;color:var(--text);min-width:50px;text-align:center;}
+
+
+  /* GHOST */
+  .ghost-status-bar{background:rgba(0,0,0,0.3);border:1px solid rgba(142,68,173,0.25);border-radius:8px;padding:11px;margin-bottom:11px;}
+  .ghost-bar{height:5px;background:rgba(142,68,173,0.15);border-radius:3px;overflow:hidden;}
+  .ghost-bar-fill{height:100%;background:linear-gradient(90deg,#8e44ad,#e056fd);border-radius:3px;transition:width 0.5s;}
+  .ghost-bar-text{font-family:'Cinzel',serif;font-size:12px;font-weight:700;color:#e056fd;margin-top:5px;text-align:right;}
+  .ghost-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:11px;}
+  .ghost-stat-box{background:rgba(0,0,0,0.3);border:1px solid rgba(142,68,173,0.2);border-radius:8px;padding:9px;text-align:center;}
+  .ghost-stat-value{font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:#e056fd;display:block;}
+  .ghost-stat-label{font-size:10px;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:1px;}
+
+
+
+  /* DEBUG */
+  .debug-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  .debug-item{background:rgba(0,0,0,0.3);border-radius:8px;padding:9px 11px;border-left:3px solid;}
+  .debug-item.green{border-color:var(--green);}
+  .debug-item.gold{border-color:var(--gold);}
+  .debug-item.purple{border-color:var(--purple);}
+  .debug-item.red{border-color:var(--red);}
+  .debug-item-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;}
+  .debug-item-value{font-family:'Cinzel',serif;font-size:12px;font-weight:700;margin-top:2px;}
+  .debug-item.green .debug-item-value{color:#5ddf8a;}
+  .debug-item.gold .debug-item-value{color:var(--gold-light);}
+  .debug-item.purple .debug-item-value{color:#c890ff;}
+  .debug-item.red .debug-item-value{color:#ff8080;}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(201,162,39,0.08);}
+  .toggle-row:last-child{border-bottom:none;padding-bottom:0;}
+  .toggle-label{font-size:13px;font-weight:600;}
+  .toggle-desc{font-size:10px;color:var(--text-dim);}
+  .toggle{position:relative;width:44px;height:22px;flex-shrink:0;background:rgba(255,255,255,0.1);border-radius:11px;cursor:pointer;transition:background 0.3s;border:1px solid rgba(201,162,39,0.2);}
+  .toggle.on{background:rgba(201,162,39,0.5);border-color:var(--gold);}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--text-dim);border-radius:50%;transition:all 0.3s;}
+  .toggle.on::after{left:24px;background:var(--gold-light);}
+  .progress-wrap{margin-top:7px;}
+  .progress-bar{height:4px;background:rgba(201,162,39,0.1);border-radius:2px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold-light));border-radius:2px;transition:width 0.5s;}
+  .progress-label{font-size:11px;color:var(--text-dim);margin-top:3px;text-align:right;}
+  .dp-row{display:flex;gap:10px;align-items:flex-end;}
+  .dp-row .field{flex:1;margin-bottom:0;}
+  .warn-box{background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.3);border-radius:8px;padding:9px 13px;font-size:12px;color:#ff9988;display:flex;gap:7px;align-items:flex-start;margin-top:10px;}
+  .info-box{background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:8px;padding:9px 13px;font-size:12px;color:#88ffb8;display:flex;gap:7px;align-items:flex-start;margin-bottom:10px;}
+  .info-box-purple{background:rgba(142,68,173,0.1);border:1px solid rgba(142,68,173,0.3);border-radius:8px;padding:9px 13px;font-size:12px;color:#d8a0ff;display:flex;gap:7px;align-items:flex-start;margin-bottom:10px;}
+  .deck-item{background:rgba(0,0,0,0.3);border:1px solid rgba(201,162,39,0.12);border-radius:8px;padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:9px;}
+  .deck-item:last-child{margin-bottom:0;}
+  .deck-num{width:24px;height:24px;background:rgba(201,162,39,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:10px;color:var(--gold);font-weight:700;flex-shrink:0;}
+  .deck-info{flex:1;}
+  .deck-name{font-size:13px;font-weight:600;}
+  .deck-stats{font-size:11px;color:var(--text-dim);margin-top:1px;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:linear-gradient(135deg,rgba(20,15,35,0.98),rgba(10,8,20,0.98));border:1px solid rgba(201,162,39,0.4);border-radius:10px;padding:10px 18px;font-family:'Cinzel',serif;font-size:12px;color:var(--gold-light);box-shadow:0 8px 32px rgba(0,0,0,0.6);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);z-index:1000;white-space:nowrap;max-width:90vw;text-align:center;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,rgba(201,162,39,0.2),transparent);margin:9px 0;}
+  .readonly-note{font-size:10px;color:rgba(201,162,39,0.4);margin-top:3px;display:flex;align-items:center;gap:3px;}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-eye">𓂀</div>
+  <h1>Yu-Gi-Oh! WC 2011<br>Save Editor</h1>
+  <div class="header-sub">Over the Nexus • NDS • v5.0</div>
+</div>
+
+<div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+  <span class="drop-icon">💾</span>
+  <div class="drop-title">Carica il tuo Save</div>
+  <div class="drop-sub">Tocca o trascina il file <strong>.sav</strong></div>
+  <input type="file" id="fileInput" accept=".sav,.bin">
+</div>
+
+<div class="editor" id="editor">
+
+  <div class="save-banner">
+    <div class="save-banner-icon">🃏</div>
+    <div style="flex:1">
+      <div class="save-banner-name" id="bannerName">—</div>
+      <div class="save-banner-detail" id="bannerDetail">—</div>
+    </div>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">⚡</span><span class="section-title">Azioni Rapide</span></div>
+    <div class="section-body">
+      <div class="quick-grid">
+        <div class="quick-btn" onclick="maxDP()"><span class="quick-btn-icon">💰</span><span class="quick-btn-label">Max DP</span><span class="quick-btn-desc">999,999 punti</span></div>
+        <div class="quick-btn" onclick="unlockAllGhosts()"><span class="quick-btn-icon">👻</span><span class="quick-btn-label">Tutti Fantasmi</span><span class="quick-btn-desc">87/87</span></div>
+        <div class="quick-btn" onclick="patchBanlist()"><span class="quick-btn-icon">🃏</span><span class="quick-btn-label">Tutte le Carte</span><span class="quick-btn-desc">4228 × 3 copie</span></div>
+        <div class="quick-btn" onclick="maxCardCopies()"><span class="quick-btn-icon">🃏</span><span class="quick-btn-label">Max Copie</span><span class="quick-btn-desc">3x tutte le carte</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYER -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">👤</span><span class="section-title">Giocatore</span></div>
+    <div class="section-body">
+      <div class="field">
+        <label class="field-label">Nome Duellante (max 8 caratteri)</label>
+        <input type="text" class="field-input" id="playerName" maxlength="8">
+      </div>
+    </div>
+  </div>
+
+  <!-- DUEL POINTS -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">💎</span><span class="section-title">Duel Points</span></div>
+    <div class="section-body">
+      <div class="dp-row">
+        <div class="field"><label class="field-label">DP Attuali</label><input type="number" class="field-input" id="dpValue" min="0" max="999999"></div>
+        <button class="btn btn-gold" onclick="maxDP()" style="height:42px;flex-shrink:0">MAX</button>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar"><div class="progress-fill" id="dpProgress" style="width:0%"></div></div>
+        <div class="progress-label" id="dpProgressLabel">0 / 999,999</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATISTICHE -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">📊</span><span class="section-title">Statistiche</span></div>
+    <div class="section-body">
+      <div class="stats-grid">
+        <div class="stat-box"><span class="stat-value" id="statDP">—</span><div class="stat-label">DP</div></div>
+        <div class="stat-box"><span class="stat-value" id="statStars">—</span><div class="stat-label">★ Vinte</div></div>
+        <div class="stat-box"><span class="stat-value" id="statLosses">—</span><div class="stat-label">Perse</div></div>
+        <div class="stat-box"><span class="stat-value" id="statChapter">—</span><div class="stat-label">Cap.</div></div>
+      </div>
+      <div class="field">
+        <label class="field-label">★ Vittorie (sola lettura — verificato dalla foto)</label>
+        <input type="number" class="field-input" id="starsValue" readonly>
+        <div class="readonly-note">🔒 Non modificabile</div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Sconfitte</label><input type="number" class="field-input" id="lossesValue" min="0" max="9999"></div>
+        <div class="field"><label class="field-label">Capitolo</label><input type="number" class="field-input" id="chapterValue" min="0" max="7"></div>
+        <div class="field"><label class="field-label">Scena</label><input type="number" class="field-input" id="sceneValue" min="0" max="255"></div>
+      </div>
+      <div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;">
+        <button class="btn btn-purple" onclick="maxStory()">📖 Fine Storia</button>
+        <button class="btn btn-outline" onclick="setChapter(0)" style="font-size:10px;">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       SEZIONE ASPETTO PERSONAGGIO
+       ═══════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🎨</span>
+      <span class="section-title">Aspetto Personaggio</span>
+    </div>
+    <div class="section-body">
+      <div class="info-box">
+        <span>🎨</span>
+        <span>Colori in formato <strong>BGR555</strong> (Nintendo DS). I 3 slider corrispondono esattamente agli slider R/G/B che vedi nel gioco!</span>
+      </div>
+
+      <!-- SKIN & HAIR SELECTORS -->
+      <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Selettori No.XX</div>
+
+      <div class="selector-row">
+        <div><div class="selector-label">🧑 Colore Pelle</div></div>
+        <div class="selector-controls">
+          <div class="sel-btn" onclick="adjustSelector('skinIdx',-1)">‹</div>
+          <div class="sel-value" id="skinIdxDisplay">No.01</div>
+          <div class="sel-btn" onclick="adjustSelector('skinIdx',1)">›</div>
+        </div>
+      </div>
+      <div class="selector-row">
+        <div><div class="selector-label">💇 Pettinatura</div></div>
+        <div class="selector-controls">
+          <div class="sel-btn" onclick="adjustSelector('hairStyleIdx',-1)">‹</div>
+          <div class="sel-value" id="hairStyleIdxDisplay">No.01</div>
+          <div class="sel-btn" onclick="adjustSelector('hairStyleIdx',1)">›</div>
+        </div>
+      </div>
+      <div class="selector-row">
+        <div><div class="selector-label">⚙️ Duel Disk</div></div>
+        <div class="selector-controls">
+          <div class="sel-btn" onclick="adjustSelector('diskIdx',-1)">‹</div>
+          <div class="sel-value" id="diskIdxDisplay">No.01</div>
+          <div class="sel-btn" onclick="adjustSelector('diskIdx',1)">›</div>
+        </div>
+      </div>
+      <div class="selector-row" style="margin-bottom:14px;">
+        <div><div class="selector-label">🎭 Stile Extra</div></div>
+        <div class="selector-controls">
+          <div class="sel-btn" onclick="adjustSelector('extraIdx',-1)">‹</div>
+          <div class="sel-value" id="extraIdxDisplay">No.01</div>
+          <div class="sel-btn" onclick="adjustSelector('extraIdx',1)">›</div>
+        </div>
+      </div>
+
+      <!-- CLOTHING COLOR -->
+      <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">Colore Vestiti</div>
+      <div class="color-section" id="colorSection">
+        <!-- Clothing Color 1 -->
+        <div class="color-row" id="row_c1">
+          <div class="color-preview" id="preview_c1" style="background:#100808;">
+            <input type="color" id="picker_c1" onchange="onPickerChange('c1',this.value)">
+          </div>
+          <div class="color-info">
+            <div class="color-name">Vestiti — Colore 1</div>
+            <div class="color-hex" id="hex_c1">#100808</div>
+          </div>
+          <div class="color-sliders">
+            <div class="slider-row">
+              <span class="slider-label r">R</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider rr" min="0" max="31" id="r_c1" oninput="onSlider('c1')"></div>
+              <span class="slider-val" id="rv_c1">0</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label g">G</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider gg" min="0" max="31" id="g_c1" oninput="onSlider('c1')"></div>
+              <span class="slider-val" id="gv_c1">0</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label b">B</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider bb" min="0" max="31" id="b_c1" oninput="onSlider('c1')"></div>
+              <span class="slider-val" id="bv_c1">0</span>
+            </div>
+          </div>
+        </div>
+        <!-- Clothing Color 2 -->
+        <div class="color-row" id="row_c2">
+          <div class="color-preview" id="preview_c2" style="background:#308840;">
+            <input type="color" id="picker_c2" onchange="onPickerChange('c2',this.value)">
+          </div>
+          <div class="color-info">
+            <div class="color-name">Vestiti — Colore 2</div>
+            <div class="color-hex" id="hex_c2">#308840</div>
+          </div>
+          <div class="color-sliders">
+            <div class="slider-row">
+              <span class="slider-label r">R</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider rr" min="0" max="31" id="r_c2" oninput="onSlider('c2')"></div>
+              <span class="slider-val" id="rv_c2">0</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label g">G</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider gg" min="0" max="31" id="g_c2" oninput="onSlider('c2')"></div>
+              <span class="slider-val" id="gv_c2">0</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label b">B</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider bb" min="0" max="31" id="b_c2" oninput="onSlider('c2')"></div>
+              <span class="slider-val" id="bv_c2">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- HAIR COLOR -->
+        <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px;margin:13px 0 8px;">Colore Capelli</div>
+        <!-- Hair Color 1 -->
+        <div class="color-row">
+          <div class="color-preview" id="preview_h1" style="background:#783828;">
+            <input type="color" id="picker_h1" onchange="onPickerChange('h1',this.value)">
+          </div>
+          <div class="color-info">
+            <div class="color-name">Capelli — Colore 1</div>
+            <div class="color-hex" id="hex_h1">#783828</div>
+          </div>
+          <div class="color-sliders">
+            <div class="slider-row">
+              <span class="slider-label r">R</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider rr" min="0" max="31" id="r_h1" oninput="onSlider('h1')"></div>
+              <span class="slider-val" id="rv_h1">0</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label g">G</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider gg" min="0" max="31" id="g_h1" oninput="onSlider('h1')"></div>
+              <span class="slider-val" id="gv_h1">0</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label b">B</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider bb" min="0" max="31" id="b_h1" oninput="onSlider('h1')"></div>
+              <span class="slider-val" id="bv_h1">0</span>
+            </div>
+          </div>
+        </div>
+        <!-- Hair Color 2 / Scarf -->
+        <div class="color-row">
+          <div class="color-preview" id="preview_h2" style="background:#F82028;">
+            <input type="color" id="picker_h2" onchange="onPickerChange('h2',this.value)">
+          </div>
+          <div class="color-info">
+            <div class="color-name">Sciarpa / Accessorio</div>
+            <div class="color-hex" id="hex_h2">#F82028</div>
+          </div>
+          <div class="color-sliders">
+            <div class="slider-row">
+              <span class="slider-label r">R</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider rr" min="0" max="31" id="r_h2" oninput="onSlider('h2')"></div>
+              <span class="slider-val" id="rv_h2">0</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label g">G</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider gg" min="0" max="31" id="g_h2" oninput="onSlider('h2')"></div>
+              <span class="slider-val" id="gv_h2">0</span>
+            </div>
+            <div class="slider-row">
+              <span class="slider-label b">B</span>
+              <div class="slider-wrap"><input type="range" class="rgb-slider bb" min="0" max="31" id="b_h2" oninput="onSlider('h2')"></div>
+              <span class="slider-val" id="bv_h2">0</span>
+            </div>
+          </div>
+        </div>
+      </div><!-- end colorSection -->
+
+      <!-- SBLOCCO VESTITI / DISK / SLEEVE -->
+      <div style="margin-top:14px;">
+        <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:9px;">Sblocco Oggetti</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(201,162,39,0.2);border-radius:10px;padding:10px 8px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:3px;">👗</div>
+            <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">Vestiti</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);margin:4px 0;" id="clothesCount">—/15</div>
+            <button class="btn btn-outline" onclick="unlockAll('clothes')" style="padding:5px 6px;font-size:10px;width:100%;">Tutti</button>
+          </div>
+          <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(201,162,39,0.2);border-radius:10px;padding:10px 8px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:3px;">💿</div>
+            <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">Duel Disk</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);margin:4px 0;" id="disksCount">—/13</div>
+            <button class="btn btn-outline" onclick="unlockAll('disks')" style="padding:5px 6px;font-size:10px;width:100%;">Tutti</button>
+          </div>
+          <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(201,162,39,0.2);border-radius:10px;padding:10px 8px;text-align:center;">
+            <div style="font-size:18px;margin-bottom:3px;">🃏</div>
+            <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">Card Sleeve</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);margin:4px 0;" id="sleevesCount">—/20</div>
+            <button class="btn btn-outline" onclick="unlockAll('sleeves')" style="padding:5px 6px;font-size:10px;width:100%;">Tutti</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LISTA PROIBITA -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🚫</span>
+      <span class="section-title">Sblocco Carte — Tutte le Carte</span>
+      <span class="section-badge" id="banBadge" style="background:rgba(0,180,0,0.15);color:#88ff88;border-color:rgba(0,180,0,0.3);">4228 carte</span>
+    </div>
+    <div class="section-body">
+
+      <div class="info-box-purple">
+        <span>🎴</span>
+        <span>Sblocca tutte le <strong>4228 carte</strong> del gioco con <strong>3 copie</strong> ciascuna. Premi il pulsante e scarica il save.</span>
+      </div>
+
+      <!-- Contatori -->
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <div class="ghost-stat-box" style="flex:1">
+          <span class="ghost-stat-value" id="banForbidden" style="color:#ff6060;">—</span>
+          <div class="ghost-stat-label">Proibite (0)</div>
+        </div>
+        <div class="ghost-stat-box" style="flex:1">
+          <span class="ghost-stat-value" id="banLimited" style="color:#ffcc00;">—</span>
+          <div class="ghost-stat-label">Limitate (1)</div>
+        </div>
+        <div class="ghost-stat-box" style="flex:1">
+          <span class="ghost-stat-value" id="banSemi" style="color:#88aaff;">—</span>
+          <div class="ghost-stat-label">Semi-lim. (2)</div>
+        </div>
+        <div class="ghost-stat-box" style="flex:1">
+          <span class="ghost-stat-value" id="banUnlimited" style="color:#88ff88;">—</span>
+          <div class="ghost-stat-label">Libere (3)</div>
+        </div>
+      </div>
+
+      <button class="btn btn-block" onclick="patchBanlist()"
+        style="background:linear-gradient(135deg,#6a0a0a,#c0392b,#6a0a0a);color:#ffdddd;padding:12px;border-radius:10px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;cursor:pointer;border:none;margin-bottom:8px;font-weight:600;">
+        🚫 → ✅ Sblocca tutte le carte del gioco (4228 carte, 3 copie)
+      </button>
+      <div id="banPatchDone" style="display:none" class="info-box">
+        <span>✅</span><span>Patch applicata: tutte le 4228 carte sbloccate con 3 copie ciascuna.</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- GHOST OPPONENTS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">👻</span>
+      <span class="section-title">Avversari Fantasma</span>
+      <span class="section-badge" id="ghostBadge">—/87</span>
+    </div>
+    <div class="section-body">
+      <div class="info-box-purple"><span>🔍</span><span><strong>87 fantasmi</strong> trovati con tabella duelli (0xAA28) e vittorie (0xAAD6).</span></div>
+      <div class="ghost-status-bar">
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;">Fantasmi con dati</div>
+        <div class="ghost-bar"><div class="ghost-bar-fill" id="ghostBarFill" style="width:0%"></div></div>
+        <div class="ghost-bar-text" id="ghostBarText">—/87</div>
+      </div>
+      <div class="ghost-grid">
+        <div class="ghost-stat-box"><span class="ghost-stat-value" id="ghostTotalDuels">—</span><div class="ghost-stat-label">Duelli totali</div></div>
+        <div class="ghost-stat-box"><span class="ghost-stat-value" id="ghostTotalWins">—</span><div class="ghost-stat-label">Vittorie</div></div>
+      </div>
+      <button class="btn btn-purple btn-block" onclick="unlockAllGhosts()">👻 Sblocca TUTTI i 87 Fantasmi</button>
+    </div>
+  </div>
+
+
+    <!-- INFO SAVE -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🔍</span><span class="section-title">Info Save</span></div>
+    <div class="section-body">
+      <div class="debug-grid" id="debugGrid" style="margin-bottom:12px;"></div>
+      <div class="divider"></div>
+      <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin:8px 0 7px;">Opzioni</div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Max Stat Giocatore</div><div class="toggle-desc">5 stat al massimo (132 — valore completo)</div></div>
+        <div class="toggle" id="toggleStats" onclick="toggleOpt('toggleStats')"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Azzera Sconfitte</div><div class="toggle-desc">Imposta losses = 0</div></div>
+        <div class="toggle" id="toggleZeroLoss" onclick="toggleOpt('toggleZeroLoss')"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Max Booster</div><div class="toggle-desc">Sblocca accesso booster</div></div>
+        <div class="toggle" id="toggleBooster" onclick="toggleOpt('toggleBooster')"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAZZI -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">🃏</span><span class="section-title">Mazzi Salvati</span></div>
+    <div class="section-body" id="deckList"></div>
+  </div>
+
+  <!-- DOWNLOAD -->
+  <div class="section">
+    <div class="section-header"><span class="section-icon">💾</span><span class="section-title">Salva</span></div>
+    <div class="section-body">
+      <button class="btn btn-gold btn-block" onclick="downloadSave()">⬇️ Scarica Save Modificato</button>
+      <div class="warn-box"><span>⚠️</span><span>File scaricato con il <strong>nome identico all'originale</strong> → copia-sostituisci diretto. Se il gioco non lo riconosce usa <strong>YGOWC11SaveFix</strong>.</span></div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast">✓ Ok</div>
+
+<script>
+// ══════════════════════════════════════════
+//  OFFSETS
+// ══════════════════════════════════════════
+const OFF = {
+  S1_NAME_LEN:0x850C, S1_NAME:0x850D,
+  S1_DP:0x8528,
+  S1_STARS:0x85D4,   // ★ vittorie reali (confermato foto ★=2)
+  S1_LOSSES:0x858A,
+  S1_CHAPTER:0x8536, S1_SCENE:0x8537,
+  S1_STATS:0x8522,   // 5 byte stats (max 132 = 0x84, dal cheat41)
+
+  // Appearance selectors (u32 LE, 0-based = No.XX - 1)
+  SKIN_IDX:0x8544,       // Colore pelle No.XX
+  HAIR_STYLE_IDX:0x8548, // Pettinatura No.XX
+  DISK_IDX:0x854C,       // Duel Disk tipo
+  EXTRA_IDX:0x8550,      // Extra style
+
+  // Colors BGR555 u16 LE
+  COLOR_C1:0x8554,  // Colore vestiti 1
+  COLOR_C2:0x8556,  // Colore vestiti 2
+  COLOR_H1:0x8558,  // Colore capelli 1
+  COLOR_H2:0x855A,  // Colore sciarpa/accessorio
+
+  // 29 body part slots (byte each, range 0-24)
+  SLOTS:0x855C,
+
+  S2_NAME_LEN:0xB844, S2_NAME:0xB845, S2_DP:0xB860,
+  S2_CHAPTER:0xB86E, S2_SCENE:0xB86F,
+  S2_LOSSES:0xB8C2,   S2_STATS:0xB85A,
+  // Appearance backup (primario + 0x3338)
+  S2_SKIN_IDX:0xB87C, S2_HAIR_STYLE_IDX:0xB880, S2_DISK_IDX:0xB884, S2_EXTRA_IDX:0xB888,
+  S2_COLOR_C1:0xB88C, S2_COLOR_C2:0xB88E, S2_COLOR_H1:0xB890, S2_COLOR_H2:0xB892,
+
+  // Ownership bitfields (from cheat code analysis)
+  CLOTHES:0x857C,     CLOTHES_MAX:0x7FFF,      // u16, 15 outfits
+  DISKS:0x8580,       DISKS_MAX:0x0001F3F3,     // u32, 13 duel disks
+  SLEEVES:0xB81C,     SLEEVES_MAX:0x000FFFFF,   // u32, 20 card sleeves
+  S2_CLOTHES:0xB8B4, S2_DISKS:0xB8B8, S2_SLEEVES:0xEB54,
+
+  // CPU Duelists unlock bitfields (derivati dai cheat codes AR)
+  CPU_NORM_0:0xAD26, CPU_NORM_1:0xAD28, CPU_NORM_2:0xAD2C,
+  CPU_TURB_0:0xAD32, CPU_TURB_1:0xAD34,
+  CPU_TAG_0:0xAD5C,  CPU_TAG_1:0xAD60, CPU_TAG_2:0xAD64, CPU_TAG_3:0xAD68,
+  // Valori massimi (da cheat16, 18, 22)
+  CPU_NORM_0_MAX:0xFFFE, CPU_NORM_1_MAX:0xFFFFFFFF, CPU_NORM_2_MAX:0x1FFF,
+  CPU_TURB_0_MAX:0xFFE0, CPU_TURB_1_MAX:0x01FF,
+  CPU_TAG_0_MAX:0x00101C18, CPU_TAG_1_MAX:0x41843F20,
+  CPU_TAG_2_MAX:0xFF61C6FF, CPU_TAG_3_MAX:0x4C03,
+  // Backup (primario + 0x3338)
+  S2_CPU_NORM_0:0xE05E, S2_CPU_NORM_1:0xE060, S2_CPU_NORM_2:0xE064,
+  S2_CPU_TURB_0:0xE06A, S2_CPU_TURB_1:0xE06C,
+  S2_CPU_TAG_0:0xE094, S2_CPU_TAG_1:0xE098, S2_CPU_TAG_2:0xE09C, S2_CPU_TAG_3:0xE0A0,
+
+  GHOST_DUELS:0xAA28, GHOST_WINS:0xAAD6, GHOST_COUNT:87,
+  // Tabella copie carte (nibble-packed: ogni nibble = 1 carta, 0x33 = 3 copie)
+  CARDS_START:0x8E2E, CARDS_END:0x9670,   // primario
+  S2_CARDS_START:0xC166, S2_CARDS_END:0xC9A8, // backup
+  BOOSTER_START:0xA760, BOOSTER_END:0xA7A0,
+  HEADER_CRC:0x000C
+};
+
+
+
+
+
+
+
+
+// ══════════════════════════════════════════
+//  CRC32 & BINARY UTILS
+// ══════════════════════════════════════════
+const T32=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c;}return t;})();
+function crc32(b,s,e){let c=0xFFFFFFFF;for(let i=s;i<e;i++)c=T32[(c^b[i])&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+function r32(b,o){return b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24);}
+function r16(b,o){return b[o]|(b[o+1]<<8);}
+function w32(b,o,v){v=v>>>0;b[o]=v&0xFF;b[o+1]=(v>>8)&0xFF;b[o+2]=(v>>16)&0xFF;b[o+3]=(v>>24)&0xFF;}
+function w16(b,o,v){b[o]=v&0xFF;b[o+1]=(v>>8)&0xFF;}
+function readName(b,lo,no){const len=b[lo];if(!len||len>12)return'';let s='';for(let i=0;i<len-1;i++){const c=b[no+i];if(!c)break;if(c>=32&&c<127)s+=String.fromCharCode(c);}return s;}
+function writeName(b,lo,no,name){name=name.slice(0,8).replace(/[^\x20-\x7E]/g,'');for(let i=0;i<9;i++)b[no+i]=0;b[lo]=name.length+1;for(let i=0;i<name.length;i++)b[no+i]=name.charCodeAt(i);}
+
+// ══════════════════════════════════════════
+//  BGR555 UTILS
+// ══════════════════════════════════════════
+function bgr555ToRgb(v){return{r:(v&0x1F)*8,g:((v>>5)&0x1F)*8,b:((v>>10)&0x1F)*8};}
+function rgbToBgr555(r,g,b){return((r/8|0)&0x1F)|(((g/8|0)&0x1F)<<5)|(((b/8|0)&0x1F)<<10);}
+function rgb5ToHex(r5,g5,b5){return '#'+[r5*8,g5*8,b5*8].map(x=>x.toString(16).padStart(2,'0')).join('');}
+function hexToRgb5(hex){const n=parseInt(hex.slice(1),16);return{r5:(n>>16)&0xFF,g5:(n>>8)&0xFF,b5:n&0xFF};}
+
+// Color state
+const colorKeys = {c1:OFF.COLOR_C1, c2:OFF.COLOR_C2, h1:OFF.COLOR_H1, h2:OFF.COLOR_H2};
+
+function loadColorUI(buf, key) {
+  const off = colorKeys[key];
+  const bgr = r16(buf, off);
+  const r5 = bgr&0x1F, g5=(bgr>>5)&0x1F, b5=(bgr>>10)&0x1F;
+  document.getElementById('r_'+key).value = r5;
+  document.getElementById('g_'+key).value = g5;
+  document.getElementById('b_'+key).value = b5;
+  updateColorDisplay(key, r5, g5, b5);
+}
+
+function onSlider(key) {
+  const r5 = +document.getElementById('r_'+key).value;
+  const g5 = +document.getElementById('g_'+key).value;
+  const b5 = +document.getElementById('b_'+key).value;
+  updateColorDisplay(key, r5, g5, b5);
+}
+
+function onPickerChange(key, hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  const r5 = r/8|0, g5 = g/8|0, b5 = b/8|0;
+  document.getElementById('r_'+key).value = r5;
+  document.getElementById('g_'+key).value = g5;
+  document.getElementById('b_'+key).value = b5;
+  updateColorDisplay(key, r5, g5, b5);
+}
+
+function updateColorDisplay(key, r5, g5, b5) {
+  const r=r5*8, g=g5*8, b=b5*8;
+  const hex = '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  document.getElementById('preview_'+key).style.background = hex;
+  document.getElementById('hex_'+key).textContent = hex.toUpperCase()+` (R5:${r5} G5:${g5} B5:${b5})`;
+  document.getElementById('picker_'+key).value = hex;
+  document.getElementById('rv_'+key).textContent = r5;
+  document.getElementById('gv_'+key).textContent = g5;
+  document.getElementById('bv_'+key).textContent = b5;
+}
+
+function saveColorsToBuffer(buf) {
+  for (const [key, off] of Object.entries(colorKeys)) {
+    const r5=+document.getElementById('r_'+key).value;
+    const g5=+document.getElementById('g_'+key).value;
+    const b5=+document.getElementById('b_'+key).value;
+    w16(buf, off, rgbToBgr555(r5*8, g5*8, b5*8));
+  }
+}
+
+// Selector state
+const selState = {skinIdx:1, hairStyleIdx:1, diskIdx:1, extraIdx:1};
+const selOff = {skinIdx:OFF.SKIN_IDX, hairStyleIdx:OFF.HAIR_STYLE_IDX, diskIdx:OFF.DISK_IDX, extraIdx:OFF.EXTRA_IDX};
+const selDisp = {skinIdx:'skinIdxDisplay', hairStyleIdx:'hairStyleIdxDisplay', diskIdx:'diskIdxDisplay', extraIdx:'extraIdxDisplay'};
+
+function adjustSelector(key, delta) {
+  selState[key] = Math.max(1, Math.min(10, selState[key] + delta));
+  document.getElementById(selDisp[key]).textContent = 'No.'+String(selState[key]).padStart(2,'0');
+}
+
+function loadSelectors(buf) {
+  for (const [key, off] of Object.entries(selOff)) {
+    const val = r32(buf,off) + 1; // 0-based -> 1-based for display
+    selState[key] = Math.max(1, Math.min(10, val));
+    document.getElementById(selDisp[key]).textContent = 'No.'+String(selState[key]).padStart(2,'0');
+  }
+}
+
+function saveSelectorsToBuffer(buf) {
+  for (const [key, off] of Object.entries(selOff)) {
+    w32(buf, off, selState[key] - 1); // 1-based -> 0-based
+  }
+}
+
+
+
+// ══════════════════════════════════════════
+//  GHOST & OUTFIT
+// ══════════════════════════════════════════
+function parseGhosts(buf){
+  let unlocked=0,td=0,tw=0;
+  for(let i=0;i<OFF.GHOST_COUNT;i++){
+    const d=r16(buf,OFF.GHOST_DUELS+i*2), w=r16(buf,OFF.GHOST_WINS+i*2);
+    td+=d; tw+=w; if(d||w) unlocked++;
+  }
+  return{unlocked,td,tw};
+}
+const GHOST_DUELS_S2 = 0xDD60;  // GHOST_DUELS + 0x3338
+const GHOST_WINS_S2  = 0xDE0E;  // GHOST_WINS + 0x3338
+
+function unlockAllGhosts(){
+  if(!saveData)return;
+  const buf=new Uint8Array(saveData);
+
+  // Ghost duel stats (0xAA28) — storico partite
+  for(let i=0;i<OFF.GHOST_COUNT;i++){
+    if(r16(buf,OFF.GHOST_DUELS+i*2)===0)   w16(buf,OFF.GHOST_DUELS+i*2,1);
+    if(r16(buf,OFF.GHOST_WINS+i*2)===0)    w16(buf,OFF.GHOST_WINS+i*2,1);
+    if(r16(buf,OFF.GHOST_DUELS_S2+i*2)===0) w16(buf,OFF.GHOST_DUELS_S2+i*2,1);
+    if(r16(buf,OFF.GHOST_WINS_S2+i*2)===0)  w16(buf,OFF.GHOST_WINS_S2+i*2,1);
+  }
+
+  // CPU Duelists unlock bitfields — personaggi della storia
+  // 60 Normal Duelists
+  w16(buf,OFF.CPU_NORM_0,OFF.CPU_NORM_0_MAX);
+  w32(buf,OFF.CPU_NORM_1,OFF.CPU_NORM_1_MAX);
+  w16(buf,OFF.CPU_NORM_2,OFF.CPU_NORM_2_MAX);
+  // 25 Turbo Duelists
+  w16(buf,OFF.CPU_TURB_0,OFF.CPU_TURB_0_MAX);
+  w16(buf,OFF.CPU_TURB_1,OFF.CPU_TURB_1_MAX);
+  // Tag Partners
+  w32(buf,OFF.CPU_TAG_0,OFF.CPU_TAG_0_MAX);
+  w32(buf,OFF.CPU_TAG_1,OFF.CPU_TAG_1_MAX);
+  w32(buf,OFF.CPU_TAG_2,OFF.CPU_TAG_2_MAX);
+  w16(buf,OFF.CPU_TAG_3,OFF.CPU_TAG_3_MAX);
+  // Backup
+  w16(buf,OFF.S2_CPU_NORM_0,OFF.CPU_NORM_0_MAX);
+  w32(buf,OFF.S2_CPU_NORM_1,OFF.CPU_NORM_1_MAX);
+  w16(buf,OFF.S2_CPU_NORM_2,OFF.CPU_NORM_2_MAX);
+  w16(buf,OFF.S2_CPU_TURB_0,OFF.CPU_TURB_0_MAX);
+  w16(buf,OFF.S2_CPU_TURB_1,OFF.CPU_TURB_1_MAX);
+  w32(buf,OFF.S2_CPU_TAG_0,OFF.CPU_TAG_0_MAX);
+  w32(buf,OFF.S2_CPU_TAG_1,OFF.CPU_TAG_1_MAX);
+  w32(buf,OFF.S2_CPU_TAG_2,OFF.CPU_TAG_2_MAX);
+  w16(buf,OFF.S2_CPU_TAG_3,OFF.CPU_TAG_3_MAX);
+
+  saveData=buf; updateGhostDisplay();
+  showToast('👻 Tutti sbloccati: 60 normali + 25 turbo + tag partner!');
+}
+
+function maxCardCopies(){
+  if(!saveData) return;
+  const buf = new Uint8Array(saveData);
+  // Tabella nibble-packed: ogni byte = 2 carte, nibble alto e basso = n. copie
+  // 0x33 = 3 copie per entrambe le carte nel byte
+  // Primario
+  for(let i=OFF.CARDS_START; i<OFF.CARDS_END; i++) buf[i]=0x33;
+  // Backup
+  for(let i=OFF.S2_CARDS_START; i<OFF.S2_CARDS_END; i++) buf[i]=0x33;
+  saveData=buf;
+  showToast('🃏 3 copie di tutte le carte sbloccate!');
+}
+function updateGhostDisplay(){
+  const g=parseGhosts(saveData);
+  const pct=Math.round(g.unlocked/OFF.GHOST_COUNT*100);
+  document.getElementById('ghostBadge').textContent=`${g.unlocked}/87`;
+  document.getElementById('ghostBarFill').style.width=pct+'%';
+  document.getElementById('ghostBarText').textContent=`${g.unlocked}/87 con dati (${pct}%)`;
+  document.getElementById('ghostTotalDuels').textContent=g.td.toLocaleString('it');
+  document.getElementById('ghostTotalWins').textContent=g.tw.toLocaleString('it');
+}
+
+
+
+// ══════════════════════════════════════════
+//  DECK READING
+// ══════════════════════════════════════════
+function readDecks(buf){
+  const decks=[];let off=0x85E0;
+  while(off<0xA940-40){
+    const nl=buf[off];
+    if(nl>=1&&nl<=16){let name='',ok=true;
+      for(let i=0;i<nl-1;i++){const c=buf[off+1+i];if(!c)break;if(c<32||c>126){ok=false;break;}name+=String.fromCharCode(c);}
+      if(ok&&name.length>=3){const co=off+20;if(co+12<buf.length){const m=r32(buf,co),e=r32(buf,co+4),s=r32(buf,co+8);
+        if(m>=20&&m<=60&&e<=15&&s<=15){decks.push({name,main:m,extra:e,side:s});off+=20+12+(m+e+s)*2+8;continue;}}}}
+    off++;
+  }
+  return decks;
+}
+
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let saveData=null, fileName='save.sav';
+const toggleState={toggleStats:false,toggleZeroLoss:false,toggleBooster:false};
+
+// ══════════════════════════════════════════
+//  FILE LOADING
+// ══════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change',e=>{const f=e.target.files[0];if(f)loadFile(f);});
+const dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
+
+function loadFile(file){
+  fileName=file.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const buf=new Uint8Array(e.target.result);
+    if(!String.fromCharCode(...buf.slice(0,7)).startsWith('wcs2011')){showToast('⚠️ File non valido!');return;}
+    saveData=buf; populateEditor();
+    document.getElementById('dropZone').style.display='none';
+    document.getElementById('editor').classList.add('visible');
+    showToast('✅ Save caricato!');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function populateEditor(){
+  const buf=saveData;
+  const name=readName(buf,OFF.S1_NAME_LEN,OFF.S1_NAME);
+  document.getElementById('playerName').value=name;
+  document.getElementById('bannerName').textContent=name||'Duellante';
+  const dp=r32(buf,OFF.S1_DP);
+  document.getElementById('dpValue').value=dp; updateDPBar(dp);
+  document.getElementById('statDP').textContent=dp.toLocaleString('it');
+  const stars=r16(buf,OFF.S1_STARS);
+  document.getElementById('starsValue').value=stars;
+  document.getElementById('statStars').textContent=stars;
+  const losses=r16(buf,OFF.S1_LOSSES);
+  document.getElementById('lossesValue').value=losses;
+  document.getElementById('statLosses').textContent=losses;
+  const ch=buf[OFF.S1_CHAPTER],sc=buf[OFF.S1_SCENE];
+  document.getElementById('chapterValue').value=ch;
+  document.getElementById('sceneValue').value=sc;
+  document.getElementById('statChapter').textContent=`Cap.${ch}`;
+  document.getElementById('bannerDetail').textContent=`${dp.toLocaleString('it')} DP • ★${stars} • Cap.${ch}`;
+
+  // Appearance
+  loadSelectors(buf);
+  for(const key of Object.keys(colorKeys)) loadColorUI(buf,key);
+
+  // Ghost & Outfit
+  updateGhostDisplay();
+  updateBanDisplay(buf);
+  updateItemDisplay(buf);
+
+  // Debug
+  const sess=buf[0xB824],statsMax=[0,1,2,3,4].every(i=>buf[OFF.S1_STATS+i]>=132);
+  // Sincronizza toggle Stats con valore reale
+  toggleState.toggleStats=statsMax;
+  document.getElementById('toggleStats').classList.toggle('on',statsMax);
+  document.getElementById('debugGrid').innerHTML=`
+    <div class="debug-item green"><div class="debug-item-label">Sessioni gioco</div><div class="debug-item-value">${sess}</div></div>
+    <div class="debug-item gold"><div class="debug-item-label">Vittorie ★ reali</div><div class="debug-item-value">${stars}</div></div>
+    <div class="debug-item purple"><div class="debug-item-label">Stat giocatore</div><div class="debug-item-value">${statsMax?'MAX (132)':buf[OFF.S1_STATS]+'/132'}</div></div>
+    <div class="debug-item red"><div class="debug-item-label">Debug ROM mode</div><div class="debug-item-value">Non nel .sav</div></div>
+  `;
+
+  const decks=readDecks(buf);
+  document.getElementById('deckList').innerHTML=decks.length
+    ?decks.map((d,i)=>`<div class="deck-item"><div class="deck-num">${i+1}</div><div class="deck-info"><div class="deck-name">${escH(d.name)}</div><div class="deck-stats">Main: ${d.main} • Extra: ${d.extra} • Side: ${d.side}</div></div></div>`).join('')
+    :'<div style="color:var(--text-dim);font-size:13px;">Nessun mazzo</div>';
+
+  document.getElementById('dpValue').addEventListener('input',function(){const v=parseInt(this.value)||0;updateDPBar(v);document.getElementById('statDP').textContent=v.toLocaleString('it');});
+  document.getElementById('lossesValue').addEventListener('input',function(){document.getElementById('statLosses').textContent=this.value;});
+  document.getElementById('chapterValue').addEventListener('input',function(){document.getElementById('statChapter').textContent=`Cap.${this.value}`;});
+}
+
+function maxDP(){document.getElementById('dpValue').value=999999;document.getElementById('statDP').textContent='999,999';updateDPBar(999999);showToast('💰 DP al massimo!');}
+function maxStory(){document.getElementById('chapterValue').value=7;document.getElementById('sceneValue').value=255;document.getElementById('statChapter').textContent='Cap.7';showToast('📖 Storia completata!');}
+function setChapter(n){document.getElementById('chapterValue').value=n;document.getElementById('sceneValue').value=0;document.getElementById('statChapter').textContent=`Cap.${n}`;}
+function toggleOpt(id){toggleState[id]=!toggleState[id];document.getElementById(id).classList.toggle('on',toggleState[id]);}
+function updateDPBar(dp){const p=Math.min(100,(dp/999999)*100);document.getElementById('dpProgress').style.width=p+'%';document.getElementById('dpProgressLabel').textContent=`${(+dp).toLocaleString('it')} / 999,999`;}
+
+// ══════════════════════════════════════════
+//  VESTITI / DISCHI / SLEEVE
+// ══════════════════════════════════════════
+function countBits(n){ let c=0; while(n){c+=n&1;n>>>=1;} return c; }
+
+function updateItemDisplay(buf){
+  const clothes = r16(buf,OFF.CLOTHES);
+  const disks   = r32(buf,OFF.DISKS);
+  const sleeves = r32(buf,OFF.SLEEVES);
+  document.getElementById('clothesCount').textContent = countBits(clothes)+'/15';
+  document.getElementById('disksCount').textContent   = countBits(disks)+'/13';
+  document.getElementById('sleevesCount').textContent = countBits(sleeves)+'/20';
+}
+
+function unlockAll(type){
+  if(!saveData) return;
+  const buf = new Uint8Array(saveData);
+  if(type==='clothes'){
+    w16(buf, OFF.CLOTHES,    OFF.CLOTHES_MAX);
+    w16(buf, OFF.S2_CLOTHES, OFF.CLOTHES_MAX);
+    showToast('👗 Tutti i 15 vestiti sbloccati!');
+  } else if(type==='disks'){
+    w32(buf, OFF.DISKS,    OFF.DISKS_MAX);
+    w32(buf, OFF.S2_DISKS, OFF.DISKS_MAX);
+    showToast('💿 Tutti i 13 Duel Disk sbloccati!');
+  } else if(type==='sleeves'){
+    w32(buf, OFF.SLEEVES,    OFF.SLEEVES_MAX);
+    w32(buf, OFF.S2_SLEEVES, OFF.SLEEVES_MAX);
+    showToast('🃏 Tutte le 20 Card Sleeve sbloccate!');
+  }
+  saveData = buf;
+  updateItemDisplay(buf);
+}
+
+// ══════════════════════════════════════════
+//  BANLIST
+// ══════════════════════════════════════════
+const BAN_START = 0x9602;
+const BAN_END   = 0x97EC;  // 490 entries
+
+function parseBanlist(buf) {
+  let f=0,l=0,s=0,u=0;
+  for(let i=BAN_START;i<BAN_END;i++){
+    const v=buf[i];
+    if(v===0)f++; else if(v===1)l++; else if(v===2)s++; else u++;
+  }
+  return{f,l,s,u};
+}
+
+function updateBanDisplay(buf){
+  const {f,l,s,u}=parseBanlist(buf);
+  document.getElementById('banForbidden').textContent=f;
+  document.getElementById('banLimited').textContent=l;
+  document.getElementById('banSemi').textContent=s;
+  document.getElementById('banUnlimited').textContent=u;
+  const total=BAN_END-BAN_START;
+  const restricted=f+l+s;
+  document.getElementById('banBadge').textContent=restricted>0?`${restricted} ristr.`:'Tutto libero';
+}
+
+const BAN_START_S2 = 0xC93A;  // BAN_START + 0x3338
+const BAN_END_S2   = 0xCB24;  // BAN_END + 0x3338
+
+function patchBanlist(){
+  if(!saveData)return;
+  const buf=new Uint8Array(saveData);
+  // Banlist (490 entry) -> tutte illimitate (3)
+  for(let i=OFF.BAN_START;i<=OFF.BAN_END;i++) buf[i]=3;
+  for(let i=OFF.BAN_START_S2;i<=OFF.BAN_END_S2;i++) buf[i]=3;
+  // Copie possedute nibble-packed (4228 carte) -> 0x33 = 3 copie ciascuna
+  for(let i=OFF.CARDS_START;i<OFF.CARDS_END;i++) buf[i]=0x33;
+  for(let i=OFF.S2_CARDS_START;i<OFF.S2_CARDS_END;i++) buf[i]=0x33;
+  saveData=buf;
+  updateBanDisplay(buf);
+  document.getElementById('banPatchDone').style.display='flex';
+  showToast('✅ 4228 carte sbloccate, 3 copie ciascuna!');
+}
+
+// ══════════════════════════════════════════
+//  DOWNLOAD
+// ══════════════════════════════════════════
+function downloadSave(){
+  if(!saveData)return;
+  const buf=new Uint8Array(saveData);
+  writeName(buf,OFF.S1_NAME_LEN,OFF.S1_NAME,document.getElementById('playerName').value.trim()||'Player');
+  writeName(buf,OFF.S2_NAME_LEN,OFF.S2_NAME,document.getElementById('playerName').value.trim()||'Player');
+  const dp=Math.min(999999,Math.max(0,parseInt(document.getElementById('dpValue').value)||0));
+  w32(buf,OFF.S1_DP,dp); w32(buf,OFF.S2_DP,dp);
+  const losses=toggleState.toggleZeroLoss?0:Math.min(9999,Math.max(0,parseInt(document.getElementById('lossesValue').value)||0));
+  w16(buf,OFF.S1_LOSSES,losses); w16(buf,OFF.S2_LOSSES,losses);
+  const ch=Math.min(7,Math.max(0,parseInt(document.getElementById('chapterValue').value)||0));
+  const sc=Math.min(255,Math.max(0,parseInt(document.getElementById('sceneValue').value)||0));
+  buf[OFF.S1_CHAPTER]=ch; buf[OFF.S1_SCENE]=sc;
+  buf[OFF.S2_CHAPTER]=ch; buf[OFF.S2_SCENE]=sc;
+  // Appearance slot 1
+  saveColorsToBuffer(buf);
+  saveSelectorsToBuffer(buf);
+  // Appearance slot 2 (backup) — stessi valori
+  const colorMap2={COLOR_C1:'S2_COLOR_C1',COLOR_C2:'S2_COLOR_C2',COLOR_H1:'S2_COLOR_H1',COLOR_H2:'S2_COLOR_H2'};
+  for(const [key] of Object.entries(colorKeys)){
+    const r5=+document.getElementById('r_'+key).value;
+    const g5=+document.getElementById('g_'+key).value;
+    const b5=+document.getElementById('b_'+key).value;
+    w16(buf,OFF[colorMap2[key]],rgbToBgr555(r5*8,g5*8,b5*8));
+  }
+  w32(buf,OFF.S2_SKIN_IDX,selState.skinIdx-1);
+  w32(buf,OFF.S2_HAIR_STYLE_IDX,selState.hairStyleIdx-1);
+  w32(buf,OFF.S2_DISK_IDX,selState.diskIdx-1);
+  w32(buf,OFF.S2_EXTRA_IDX,selState.extraIdx-1);
+  // Toggles
+  if(toggleState.toggleStats){for(let i=0;i<5;i++)buf[OFF.S1_STATS+i]=132;for(let i=0;i<5;i++)buf[OFF.S2_STATS+i]=132;}
+  if(toggleState.toggleBooster)for(let i=OFF.BOOSTER_START;i<OFF.BOOSTER_END;i+=4)if(buf[i]===0x04)buf[i+2]=Math.max(buf[i+2],0x06);
+  // Banlist patch (if applied it already wrote to saveData)
+  // CRC header (wcs201100002 magic)
+  w32(buf,OFF.HEADER_CRC,crc32(buf,0,12));
+  // CRC32 blocco SYS_ primario (0x8500→0xB834, risultato scritto a 0xB834)
+  w32(buf,0xB834,crc32(buf,0x8500,0xB834));
+  // CRC32 blocco SYS_ backup (0xB838→0xEB6C, risultato scritto a 0xEB6C)
+  w32(buf,0xEB6C,crc32(buf,0xB838,0xEB6C));
+  // Download — nome identico all'originale
+  const blob=new Blob([buf],{type:'application/octet-stream'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fileName;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('💾 Save scaricato!');
+}
+
+let toastTimer;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
+function escH(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
