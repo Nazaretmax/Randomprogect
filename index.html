@@ -214,7 +214,7 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
 /* ══════════════════════════════
    FILE GRID
 ══════════════════════════════ */
-#file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:10px}
+#file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(142px,1fr));gap:10px;min-height:calc(100vh - 240px)}
 #file-grid.list{grid-template-columns:1fr;gap:2px}
 
 /* CARD */
@@ -1919,19 +1919,24 @@ function showBgCtx(e){
 function hideBgCtx(){ document.getElementById('bg-ctx').style.display='none'; }
 
 // Right-click on the grid background (not on a card)
-on('file-grid', 'contextmenu', e=>{
+document.getElementById('content').addEventListener('contextmenu', e=>{
   if(e.target.closest('.fc')) return; // card has its own menu
   e.preventDefault();
   showBgCtx(e);
 });
 
 // Long-press on grid background (mobile)
-on('file-grid', 'touchstart', e=>{
-  if(e.target.closest('.fc')) return;
-  bgLpTimer = setTimeout(()=>{ showBgBs(); }, 600);
+// Long-press on empty area (content bg) — mobile bottom sheet
+document.getElementById('content').addEventListener('touchstart', e=>{
+  // Only fire if touch is NOT on a card, modal, sidebar, nav or button
+  if(e.target.closest('.fc, #sidebar, #botnav, #topbar, button, a, input, textarea')) return;
+  bgLpTimer = setTimeout(()=>{
+    navigator.vibrate && navigator.vibrate(30); // haptic feedback
+    showBgBs();
+  }, 550);
 },{passive:true});
-on('file-grid', 'touchend', ()=>clearTimeout(bgLpTimer),{passive:true});
-on('file-grid', 'touchmove', ()=>clearTimeout(bgLpTimer),{passive:true});
+document.getElementById('content').addEventListener('touchend',  ()=>clearTimeout(bgLpTimer),{passive:true});
+document.getElementById('content').addEventListener('touchmove', ()=>clearTimeout(bgLpTimer),{passive:true});
 
 // BG ctx items
 on('bgctx-upload', 'click', ()=>{ hideBgCtx(); triggerUpload(); });
