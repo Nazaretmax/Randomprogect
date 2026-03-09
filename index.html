@@ -365,10 +365,18 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
 
 /* ══ VIEWER MODAL ══ */
 #m-ov{z-index:500}
-#modal{width:100%;max-width:1060px;max-height:92vh;display:flex;flex-direction:column}
+#modal{width:100%;max-width:1060px;max-height:92vh;display:flex;flex-direction:column;transition:max-width .25s,max-height .25s,border-radius .25s}
+#modal.fullscreen{max-width:100vw!important;max-height:100vh!important;border-radius:0!important;border:none!important}
+#m-ov.fullscreen{padding:0!important}
+/* fullscreen button */
+#m-fs{font-size:15px}
+#m-fs .fs-enter{display:inline}
+#m-fs .fs-exit{display:none}
+#modal.fullscreen #m-fs .fs-enter{display:none}
+#modal.fullscreen #m-fs .fs-exit{display:inline}
 #m-body{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;
   min-height:0;background:var(--surf);position:relative}
-#m-body iframe{width:100%;height:100%;border:none;min-height:55vh;background:#fff}
+#m-body iframe{width:100%;height:100%;border:none;min-height:55vh;background:#fff;overflow:auto}
 #m-body img{max-width:100%;max-height:78vh;object-fit:contain;display:block;
   padding:16px;cursor:zoom-in;transition:transform .3s}
 #m-body img.zoomed{cursor:zoom-out;transform:scale(2);transform-origin:center}
@@ -395,6 +403,32 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
 .fetch-fallback a:hover{opacity:.85}
 .fetch-fallback a+a{background:var(--surf);border:1px solid var(--bdr2);color:var(--tx2)}
 
+
+/* ══ SHARE PANEL ══ */
+#share-ov{z-index:560}
+#share-box{max-width:420px;width:100%;padding:22px}
+#share-box h3{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.share-filename{font-size:11px;color:var(--tx3);margin-bottom:18px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.share-links{display:flex;flex-direction:column;gap:8px}
+.share-row{display:flex;align-items:center;gap:6px}
+.share-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--tx3);min-width:54px;flex-shrink:0}
+.share-url{flex:1;border:1px solid var(--bdr2);border-radius:6px;
+  padding:7px 10px;font-family:var(--font);font-size:11px;color:var(--tx2);
+  background:var(--surf2);overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;cursor:text;outline:none;user-select:all}
+.share-url:focus{border-color:var(--acc);background:#fff}
+.copy-btn{flex-shrink:0;width:32px;height:32px;border-radius:6px;border:1px solid var(--bdr2);
+  background:var(--surf);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:14px;transition:all .15s;color:var(--tx2)}
+.copy-btn:hover{border-color:var(--acc);color:var(--acc);background:#eef2ff}
+.copy-btn.copied{border-color:var(--green);color:var(--green);background:#f0fdf4}
+.share-native-btn{width:100%;margin-top:10px}
+.share-sep{height:1px;background:var(--bdr);margin:12px 0}
+.share-qr{display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 0 4px}
+.share-qr canvas{border-radius:6px;border:1px solid var(--bdr)}
+.share-qr span{font-size:10px;color:var(--tx3)}
 /* ══ HTML PICKER ══ */
 #html-pick-ov{z-index:550}
 #html-pick-box{max-width:400px;width:100%;padding:24px}
@@ -549,6 +583,8 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
   .ov-box{width:100%;max-width:100%;border-radius:14px 14px 0 0;border-bottom:none;animation:sheetUp .25s ease}
   @keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
   #modal,#ed-modal{max-height:92vh}
+  #modal.fullscreen #m-body{min-height:calc(100vh - 52px)}
+  #modal.fullscreen #m-body iframe{min-height:calc(100vh - 52px)}
   #m-body iframe{min-height:62vh}
   #ed-filename{width:100%}
   #html-pick-box,#login-box,#folder-box,#conf-box{border-radius:14px 14px 0 0;max-width:100%}
@@ -596,6 +632,10 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
     <div class="login-btns">
       <button id="login-guest" class="btn btn-ghost">Ospite 👁</button>
       <button id="login-submit" class="btn btn-prim">Admin 🔑</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12px;color:var(--tx2)">
+      <input type="checkbox" id="remember-me" checked style="accent-color:var(--acc);width:14px;height:14px;cursor:pointer">
+      <label for="remember-me" style="cursor:pointer">Ricordami su questo dispositivo</label>
     </div>
     <div class="login-info">
       <b>Ospite:</b> può sfogliare, aprire e scaricare file.<br>
@@ -736,7 +776,9 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
       <div id="m-title" class="mh-title">file</div>
       <button class="ib adm" id="m-edit">✎</button>
       <a class="ib" id="m-gh" target="_blank" rel="noopener" title="GitHub">↗</a>
-      <a class="ib" id="m-raw" target="_blank" rel="noopener" title="Raw">⬇</a>
+      <a class="ib" id="m-raw" target="_blank" rel="noopener" title="Download Raw">⬇</a>
+      <button class="ib" id="m-share" title="Condividi link">🔗</button>
+      <button class="ib" id="m-fs" title="Schermo intero"><span class="fs-enter">⛶</span><span class="fs-exit">⊠</span></button>
       <button class="ib adm adm-danger" id="m-del" title="Elimina">🗑</button>
       <button class="ib close" id="m-cls" title="Chiudi">✕</button>
     </div>
@@ -788,11 +830,44 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
   </div>
 </div>
 
+
+<!-- ═══ SHARE MODAL ═══ -->
+<div id="share-ov" class="ov">
+  <div id="share-box" class="ov-box">
+    <h3>🔗 Condividi link</h3>
+    <div class="share-filename" id="share-filename"></div>
+    <div class="share-links">
+      <div class="share-row">
+        <span class="share-lbl">Raw</span>
+        <input class="share-url" id="share-raw-url" readonly>
+        <button class="copy-btn" data-target="share-raw-url" title="Copia">📋</button>
+      </div>
+      <div class="share-row">
+        <span class="share-lbl">Pages</span>
+        <input class="share-url" id="share-pages-url" readonly>
+        <button class="copy-btn" data-target="share-pages-url" title="Copia">📋</button>
+      </div>
+      <div class="share-row">
+        <span class="share-lbl">GitHub</span>
+        <input class="share-url" id="share-gh-url" readonly>
+        <button class="copy-btn" data-target="share-gh-url" title="Copia">📋</button>
+      </div>
+    </div>
+    <div class="share-sep"></div>
+    <button class="btn btn-prim share-native-btn" id="share-native-btn">⬆ Condividi…</button>
+    <div id="share-qr-wrap" class="share-qr" style="display:none">
+      <canvas id="share-qr-canvas"></canvas>
+      <span>QR → link Raw</span>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ CONTEXT MENU ═══ -->
 <div id="ctx">
   <div class="ci" id="ctx-open">⊞ Apri</div>
   <div class="ci" id="ctx-gh">↗ GitHub</div>
-  <div class="ci" id="ctx-raw">⬇ Raw / Download</div>
+  <div class="ci" id="ctx-raw">⬇ Download Raw</div>
+  <div class="ci" id="ctx-share">🔗 Copia link</div>
   <div class="ctx-sep admin-only"></div>
   <div class="ci admin-only" id="ctx-edit">✎ Modifica</div>
   <div class="ci admin-only" id="ctx-rename">✏ Rinomina</div>
@@ -809,6 +884,7 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
   <div class="bsi" id="bs-open"><span class="bi">⊞</span>Apri</div>
   <div class="bsi" id="bs-gh">  <span class="bi">↗</span>Vedi su GitHub</div>
   <div class="bsi" id="bs-raw"> <span class="bi">⬇</span>Download Raw</div>
+  <div class="bsi" id="bs-share"><span class="bi">🔗</span>Condividi link</div>
   <div class="bsi admin-only" id="bs-edit"><span class="bi">✎</span>Modifica</div>
   <div class="bsi del admin-only" id="bs-del"><span class="bi">🗑</span>Elimina</div>
 </div>
@@ -907,7 +983,7 @@ function applyAdminMode(admin){
 
 function logout(){
   ghToken = '';
-  sessionStorage.removeItem('gh_token');
+  localStorage.removeItem('gh_token');
   applyAdminMode(false);
   toast('Disconnesso — modalità ospite','info');
 }
@@ -933,7 +1009,9 @@ document.getElementById('login-submit').addEventListener('click', async ()=>{
     // Check write access — admin has push permission
     if(!data.permissions?.push) throw new Error('Token valido ma senza permessi di scrittura sul repo');
     ghToken = token;
-    sessionStorage.setItem('gh_token', token);
+    const rememberMe = document.getElementById('remember-me')?.checked !== false;
+    if(rememberMe) localStorage.setItem('gh_token', token);
+    else sessionStorage.setItem('gh_token', token);
     document.getElementById('login-ov').classList.remove('open');
     applyAdminMode(true);
     toast(`✓ Benvenuto Admin! Accesso a ${OWNER}/${REPO}`,'ok');
@@ -963,7 +1041,7 @@ document.getElementById('admin-badge').addEventListener('click', ()=>{
 ══════════════════════════════════════════ */
 window.addEventListener('DOMContentLoaded', async ()=>{
   // Check for saved token
-  const saved = sessionStorage.getItem('gh_token');
+  const saved = localStorage.getItem('gh_token') || sessionStorage.getItem('gh_token');
   if(saved){
     ghToken = saved;
     // silently verify
@@ -1177,7 +1255,6 @@ function handleClick(item){
   else if(item.type==='html') showHtmlPicker(item);
   else openViewer(item);
 }
-
 /* ══ HTML PICKER ══ */
 let _pickItem = null;
 function showHtmlPicker(item){
@@ -1226,6 +1303,8 @@ function openViewer(item){
         const injected = html.replace(/<head([^>]*)>/i, '<head$1><base href="'+base+'">');
         const fr = document.createElement('iframe');
         fr.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
+        fr.setAttribute('scrolling','yes');
+        fr.style.overflow='auto';
         fr.srcdoc = injected;
         body.innerHTML = ''; body.appendChild(fr);
       })
@@ -1247,6 +1326,27 @@ function closeViewer(){
   document.getElementById('m-body').innerHTML = '';
 }
 document.getElementById('m-cls').addEventListener('click', closeViewer);
+
+/* Fullscreen toggle */
+document.getElementById('m-fs').addEventListener('click', ()=>{
+  const modal = document.getElementById('modal');
+  const ov    = document.getElementById('m-ov');
+  const isFs  = modal.classList.toggle('fullscreen');
+  ov.classList.toggle('fullscreen', isFs);
+  // Also try native Fullscreen API if available
+  if(isFs){
+    if(modal.requestFullscreen) modal.requestFullscreen().catch(()=>{});
+  }else{
+    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  }
+});
+// Sync if user presses browser Esc to exit native fullscreen
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement){
+    document.getElementById('modal').classList.remove('fullscreen');
+    document.getElementById('m-ov').classList.remove('fullscreen');
+  }
+});
 document.getElementById('m-ov').addEventListener('click', e=>{ if(e.target===document.getElementById('m-ov')) closeViewer(); });
 
 /* ══ FETCH + SYNTAX HIGHLIGHT ══ */
@@ -1597,7 +1697,7 @@ document.getElementById('bs-handle').addEventListener('click',hideBS);
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
   const key = e.key;
-  if(key==='Escape'){ closeViewer(); closeEditor(); closeFolderModal(); closeHtmlPicker(); document.getElementById('conf-ov').classList.remove('open'); }
+  if(key==='Escape'){ closeViewer(); closeEditor(); closeFolderModal(); closeHtmlPicker(); closeShare(); document.getElementById('conf-ov').classList.remove('open'); }
   if(key==='/'||key.toLowerCase()==='f'){ e.preventDefault(); document.getElementById('search').focus(); }
   if(key==='Backspace'||key==='ArrowLeft') goUp();
   if(key.toLowerCase()==='g') setView('grid');
@@ -1605,9 +1705,94 @@ document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&key.toLowerCase()==='n'&&isAdmin){ e.preventDefault(); openEditor(null); }
 });
 
+
+/* ══════════════════════════════════════════
+   SHARE
+══════════════════════════════════════════ */
+function openShare(item){
+  if(!item?.path) return;
+  const raw   = rawUrl(item.path);
+  const pages = item.type==='html' ? `${PAGES}/${item.path}` : raw;
+  const gh    = ghUrl(item.path);
+
+  document.getElementById('share-filename').textContent = item.path;
+  document.getElementById('share-raw-url').value   = raw;
+  document.getElementById('share-pages-url').value = pages;
+  document.getElementById('share-gh-url').value    = gh;
+
+  // Native share button — hide if API not available
+  const nativeBtn = document.getElementById('share-native-btn');
+  nativeBtn.style.display = navigator.share ? 'flex' : 'none';
+  nativeBtn.onclick = ()=>{
+    navigator.share({
+      title: item.name,
+      text:  `${item.name} — Randomprogect`,
+      url:   item.type==='html' ? pages : raw
+    }).catch(()=>{});
+  };
+
+  // QR code for raw link
+  generateQR(raw);
+
+  document.getElementById('share-ov').classList.add('open');
+}
+
+function closeShare(){ document.getElementById('share-ov').classList.remove('open'); }
+document.getElementById('share-ov').addEventListener('click', e=>{
+  if(e.target===document.getElementById('share-ov')) closeShare();
+});
+
+// Copy buttons
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const input = document.getElementById(btn.dataset.target);
+    if(!input) return;
+    navigator.clipboard.writeText(input.value).then(()=>{
+      btn.textContent = '✓';
+      btn.classList.add('copied');
+      setTimeout(()=>{ btn.textContent='📋'; btn.classList.remove('copied'); }, 1800);
+    }).catch(()=>{
+      // fallback for http
+      input.select();
+      document.execCommand('copy');
+      btn.textContent = '✓';
+      setTimeout(()=>btn.textContent='📋', 1800);
+    });
+  });
+});
+
+// Also allow clicking the input to select all
+document.querySelectorAll('.share-url').forEach(inp=>{
+  inp.addEventListener('click', ()=>inp.select());
+});
+
+/* QR code — tiny canvas implementation */
+function generateQR(url){
+  const wrap   = document.getElementById('share-qr-wrap');
+  const canvas = document.getElementById('share-qr-canvas');
+  // Use a free QR API to get a QR image
+  const size = 140;
+  const img  = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(url)}&size=${size}x${size}&margin=1&color=111827&bgcolor=ffffff`;
+  img.onload = ()=>{
+    canvas.width  = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, size, size);
+    wrap.style.display = 'flex';
+  };
+  img.onerror = ()=>{ wrap.style.display='none'; };
+}
+
+// Wire share to existing buttons/menu items
+document.getElementById('ctx-share').addEventListener('click', ()=>{ hideCtx(); if(ctxTarget) openShare(ctxTarget); });
+document.getElementById('bs-share').addEventListener('click',  ()=>{ hideBS();  if(ctxTarget) openShare(ctxTarget); });
+document.getElementById('m-share').addEventListener('click',   ()=>{ if(ctxTarget) openShare(ctxTarget); });
+
 // Keep token secret: clear on page unload if admin never manually asked to save
 window.addEventListener('beforeunload', ()=>{
-  // token stays in sessionStorage (cleared on tab close)
+  // token persists in localStorage — user can logout via admin badge
 });
 </script>
 </body>
