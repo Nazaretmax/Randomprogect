@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Che Beastars sei? — Quiz</title>
+  <meta name="description" content="Quiz procedurale ispirato a Beastars — scopri che personaggio sei!" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #f5f0e8; --surface: #ffffff; --panel: #faf7f2;
+      --border:  rgba(0,0,0,0.08); --gold: #9a6e10; --gold-dk: #7a5200;
+      --red:     #8b1a1a; --text: #1a1208; --muted: #6b7280;
+      --radius:  14px; --shadow: 0 8px 32px rgba(0,0,0,0.10);
+      --trans:   all 0.28s cubic-bezier(0.4,0,0.2,1);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Crimson Pro', Georgia, serif; background: var(--bg);
+      color: var(--text); min-height: 100vh; line-height: 1.65; -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 0%, rgba(180,130,30,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 70% at 90% 100%, rgba(155,35,35,0.06) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .page { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; padding: 24px 16px 48px; }
+
+    /* HEADER */
+    .site-header { text-align: center; padding: 40px 0 32px; }
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.22em; color: var(--gold); text-transform: uppercase; margin-bottom: 12px; }
+    .site-header h1 {
+      font-family: 'Cinzel Decorative', cursive; font-size: clamp(1.6rem, 5vw, 2.8rem); line-height: 1.1;
+      background: linear-gradient(135deg, #7a5200 0%, #9a6e10 60%, #5c3d00 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px;
+    }
+    .site-header p { color: var(--muted); font-size: 14px; max-width: 480px; margin: 0 auto; font-style: italic; }
+
+    /* SETTINGS */
+    .settings-bar {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 24px;
+    }
+    .settings-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .settings-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    select {
+      background: var(--panel); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 28px 7px 10px; font-family: 'Crimson Pro', serif; font-size: 14px;
+      outline: none; transition: var(--trans); cursor: pointer; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+    }
+    select:focus { border-color: rgba(154,110,16,0.5); box-shadow: 0 0 0 3px rgba(154,110,16,0.10); }
+
+    /* SPINNER */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .trans-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(154,110,16,0.2); border-top-color: var(--gold); animation: spin 0.7s linear infinite; display: inline-block; flex-shrink: 0; }
+    #trans-status { display: none; align-items: center; gap: 8px; }
+    #trans-status.visible { display: flex; }
+
+    /* CARD */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+    /* PROGRESS */
+    .progress-wrap { padding: 18px 28px 0; display: flex; align-items: center; gap: 14px; }
+    .progress-bar-bg { flex: 1; height: 4px; background: rgba(0,0,0,0.06); border-radius: 99px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); border-radius: 99px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+    .progress-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+    /* QUESTION */
+    .question-area { padding: 24px 28px; }
+    .question-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase; margin-bottom: 10px; }
+    .question-text { font-size: clamp(1.1rem, 2.5vw, 1.35rem); font-weight: 600; line-height: 1.45; margin-bottom: 22px; }
+
+    /* OPTIONS */
+    .opts { display: flex; flex-direction: column; gap: 10px; }
+    .opt {
+      position: relative; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 18px; cursor: pointer; transition: var(--trans);
+      font-size: 1rem; text-align: left; color: var(--text); overflow: hidden; font-family: 'Crimson Pro', serif;
+    }
+    .opt::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(154,110,16,0.07) 0%, transparent 70%); opacity: 0; transition: opacity 0.25s; }
+    .opt:hover { border-color: rgba(154,110,16,0.35); transform: translateX(4px); }
+    .opt:hover::before, .opt.sel::before { opacity: 1; }
+    .opt.sel { border-color: var(--gold); background: rgba(154,110,16,0.07); }
+    .opt-marker { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--gold); border-radius: 3px 0 0 3px; opacity: 0; transition: opacity 0.2s; }
+    .opt.sel .opt-marker { opacity: 1; }
+    .opt-body { padding-left: 4px; }
+    .opt-letter { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 2px; }
+
+    /* NAV */
+    .nav-bar { padding: 16px 28px 20px; display: flex; gap: 10px; align-items: center; }
+    .btn { font-family: 'Crimson Pro', serif; font-size: 15px; font-weight: 600; border: none; border-radius: 9px; padding: 11px 22px; cursor: pointer; transition: var(--trans); outline: none; letter-spacing: 0.02em; }
+    .btn-primary { background: linear-gradient(135deg, #7a5200, #9a6e10); color: #fff; box-shadow: 0 4px 16px rgba(154,110,16,0.25); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(154,110,16,0.30); }
+    .btn-primary:active { transform: none; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: rgba(0,0,0,0.2); color: var(--text); }
+    .btn-danger { background: transparent; color: var(--red); border: 1px solid rgba(139,26,26,0.25); }
+    .btn-danger:hover { background: rgba(139,26,26,0.06); border-color: var(--red); }
+    .btn[disabled] { opacity: 0.38; cursor: not-allowed; transform: none !important; }
+    .spacer { flex: 1; }
+
+    /* RESULT */
+    .result-hero {
+      background: linear-gradient(135deg, #fdf8f0 0%, #f5ead8 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0; overflow: hidden; position: relative;
+    }
+    /* colored accent band driven by JS --char-color */
+    .result-hero::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: var(--char-color, var(--gold));
+    }
+    .result-hero-inner {
+      display: flex; align-items: stretch; gap: 0;
+    }
+    /* Character image panel */
+    .char-img-wrap {
+      width: 160px; flex-shrink: 0;
+      background: linear-gradient(160deg, rgba(0,0,0,0.04), rgba(0,0,0,0.10));
+      display: flex; align-items: flex-end; justify-content: center;
+      overflow: hidden; position: relative;
+    }
+    .char-img-wrap img {
+      width: 100%; max-height: 260px; object-fit: cover; object-position: top center;
+      display: block; transition: opacity 0.4s;
+    }
+    .char-img-wrap img.loading { opacity: 0; }
+    .char-img-placeholder {
+      width: 100%; height: 220px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 64px; opacity: 0.25;
+    }
+    /* Text info panel */
+    .char-info {
+      flex: 1; padding: 28px 24px 24px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .char-match-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.22em; color: var(--gold); text-transform: uppercase; }
+    .char-name { font-family: 'Cinzel Decorative', cursive; font-size: clamp(1.6rem, 5vw, 2.4rem); line-height: 1; color: #1a1208; }
+    .char-species { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .char-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+    .char-mbti-badge {
+      display: inline-flex; align-items: center;
+      background: var(--char-color, var(--gold)); color: #fff;
+      border-radius: 6px; padding: 3px 10px; font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+    }
+    .char-enn-badge {
+      display: inline-flex; align-items: center;
+      background: rgba(0,0,0,0.06); color: var(--muted);
+      border-radius: 6px; padding: 3px 10px; font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 400;
+    }
+    .char-quote {
+      font-style: italic; font-size: 0.95rem; color: rgba(26,18,8,0.65);
+      border-left: 2px solid var(--char-color, var(--gold));
+      padding-left: 12px; line-height: 1.5;
+    }
+    .char-desc { font-size: 0.95rem; line-height: 1.65; color: rgba(26,18,8,0.8); }
+    .diet-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(154,110,16,0.10); border: 1px solid rgba(154,110,16,0.30); color: #7a5200; border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; width: fit-content; }
+    /* Similarity scores */
+    .similarity-section { padding: 16px 28px 0; }
+    .sim-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .sim-name { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); width: 72px; flex-shrink: 0; }
+    .sim-bar-bg { flex: 1; height: 5px; background: rgba(0,0,0,0.06); border-radius: 99px; overflow: hidden; }
+    .sim-bar-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .sim-pct { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); width: 32px; text-align: right; flex-shrink: 0; }
+    /* Traits */
+    .traits-section { padding: 20px 28px 0; }
+    .section-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .trait-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .trait-name { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); width: 110px; flex-shrink: 0; }
+    .trait-bar-bg { flex: 1; height: 6px; background: rgba(0,0,0,0.06); border-radius: 99px; overflow: hidden; }
+    .trait-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--red), var(--gold)); transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .trait-val { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--gold); width: 32px; text-align: right; flex-shrink: 0; }
+    .explanation-section { padding: 16px 28px 24px; }
+    .explanation-text { font-size: 1rem; line-height: 1.75; color: rgba(26,18,8,0.75); white-space: pre-line; font-style: italic; border-left: 2px solid rgba(154,110,16,0.35); padding-left: 16px; }
+    .footer-bar { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    /* Mobile result layout */
+    @media (max-width: 560px) {
+      .result-hero-inner { flex-direction: column; }
+      .char-img-wrap { width: 100%; height: 200px; align-items: center; }
+      .char-img-wrap img { width: auto; height: 200px; object-fit: contain; }
+      .char-info { padding: 20px 16px; }
+    }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #fff; border: 1px solid rgba(154,110,16,0.35); color: #7a5200; border-radius: 10px; padding: 10px 20px; font-size: 14px; font-family: 'JetBrains Mono', monospace; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s; white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .toast.show { opacity: 1; pointer-events: all; }
+
+
+
+    /* ANIMATIONS */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { animation: fadeUp 0.45s cubic-bezier(0.4,0,0.2,1) both; }
+    .delay-1 { animation-delay: 0.06s; } .delay-2 { animation-delay: 0.12s; } .delay-3 { animation-delay: 0.18s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+    .shake { animation: shake 0.35s ease both; }
+    /* pulse hint on unanswered options */
+    @keyframes pulseHint { 0%,100%{border-color:rgba(0,0,0,0.08)} 50%{border-color:rgba(154,110,16,0.5)} }
+    .opts.hint .opt { animation: pulseHint 0.5s ease 2; }
+
+    /* RESPONSIVE */
+    @media (max-width: 600px) {
+      .settings-bar { padding: 12px 14px; }
+      .question-area,.nav-bar,.traits-section,.explanation-section,.footer-bar,.progress-wrap { padding-left: 16px; padding-right: 16px; }
+      .result-hero { padding: 28px 16px 22px; }
+      .trait-name { width: 80px; }
+      .nav-bar { flex-wrap: wrap; }
+      .btn { flex: 1; text-align: center; }
+    }
+
+    /* ── SHARE PREVIEW BANNER ────────────────────────────── */
+    .share-preview {
+      background: linear-gradient(135deg, #1a1208 0%, #2d1f08 100%);
+      color: #f5f0e8; border-radius: var(--radius); overflow: hidden;
+      margin-bottom: 20px; position: relative;
+    }
+    .share-preview::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--sp-color, var(--gold));
+    }
+    .share-preview-inner { display: flex; align-items: center; gap: 0; }
+    .share-preview-img {
+      width: 110px; flex-shrink: 0; overflow: hidden;
+      background: rgba(255,255,255,0.04);
+    }
+    .share-preview-img img { width: 100%; display: block; object-fit: cover; max-height: 150px; object-position: top; }
+    .share-preview-body { flex: 1; padding: 18px 20px; }
+    .share-preview-who { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.18em; color: rgba(245,240,232,0.5); text-transform: uppercase; margin-bottom: 4px; }
+    .share-preview-name { font-family: 'Cinzel Decorative', cursive; font-size: 1.3rem; color: #f5f0e8; line-height: 1.1; margin-bottom: 6px; }
+    .share-preview-species { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(245,240,232,0.55); margin-bottom: 10px; }
+    .share-preview-cta {
+      display: inline-block; background: var(--sp-color, var(--gold));
+      color: #fff; border: none; border-radius: 8px; padding: 9px 18px;
+      font-family: 'Crimson Pro', serif; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em;
+    }
+    .share-preview-cta:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    @media (max-width: 480px) {
+      .share-preview-img { width: 80px; }
+      .share-preview-name { font-size: 1.1rem; }
+    }
+
+    /* ── SHARE MODAL ─────────────────────────────────────── */
+    .share-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      z-index: 1000; display: flex; align-items: center; justify-content: center;
+      padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .share-modal-overlay.open { opacity: 1; pointer-events: all; }
+    .share-modal {
+      background: var(--surface); border-radius: 18px; box-shadow: 0 24px 80px rgba(0,0,0,0.22);
+      max-width: 420px; width: 100%; overflow: hidden;
+      transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .share-modal-overlay.open .share-modal { transform: translateY(0); }
+    .share-modal-header {
+      background: linear-gradient(135deg, #1a1208, #2d1f08);
+      padding: 24px 24px 20px; text-align: center; position: relative;
+    }
+    .share-modal-char-img { width: 90px; height: 110px; object-fit: cover; object-position: top; border-radius: 10px; display: block; margin: 0 auto 12px; background: rgba(255,255,255,0.05); }
+    .share-modal-name { font-family: 'Cinzel Decorative', cursive; font-size: 1.4rem; color: #f5f0e8; margin-bottom: 4px; }
+    .share-modal-species { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(245,240,232,0.5); }
+    .share-modal-body { padding: 20px 24px; }
+    .share-url-box {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--muted); word-break: break-all; line-height: 1.5; margin-bottom: 14px;
+      max-height: 60px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .share-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .share-btn-copy {
+      flex: 1; background: linear-gradient(135deg, #7a5200, #9a6e10); color: #fff;
+      border: none; border-radius: 9px; padding: 12px 16px; font-family: 'Crimson Pro', serif;
+      font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .share-btn-copy:hover { filter: brightness(1.1); }
+    .share-btn-wa {
+      background: #25D366; color: #fff; border: none; border-radius: 9px;
+      padding: 12px 16px; font-size: 20px; cursor: pointer; transition: all 0.2s;
+    }
+    .share-btn-wa:hover { filter: brightness(1.1); }
+    .share-btn-close {
+      width: 100%; margin-top: 8px; background: transparent; color: var(--muted);
+      border: 1px solid var(--border); border-radius: 9px; padding: 10px;
+      font-family: 'Crimson Pro', serif; font-size: 14px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .share-btn-close:hover { border-color: rgba(0,0,0,0.2); color: var(--text); }
+
+    /* ── GENDER FILTER ───────────────────────────────────── */
+    .gender-toggle { display: flex; gap: 4px; }
+    .gender-btn {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 12px; font-size: 13px;
+      cursor: pointer; transition: all 0.2s; color: var(--muted);
+      font-family: 'Crimson Pro', serif; font-weight: 600;
+      white-space: nowrap;
+    }
+    .gender-btn:hover { border-color: rgba(154,110,16,0.4); color: var(--text); }
+    .gender-btn.active {
+      background: linear-gradient(135deg, #7a5200, #9a6e10);
+      border-color: transparent; color: #fff;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header class="site-header fade-up">
+    <div class="eyebrow" id="h-eyebrow">🐾 Fan Quiz • Beastars</div>
+    <h1 id="h-title">Che Beastars sei?</h1>
+    <p id="h-sub">Rispondi alle domande e scopri il tuo archetipo animale, i tuoi tratti e molto altro.</p>
+  </header>
+
+  <div class="settings-bar fade-up delay-1">
+    <div class="settings-group">
+      <span class="settings-label">🌐 Lingua</span>
+      <select id="uilang">
+        <option value="it">🇮🇹 Italiano</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="de">🇩🇪 Deutsch</option>
+        <option value="pt">🇵🇹 Português</option>
+        <option value="ru">🇷🇺 Русский</option>
+        <option value="ja">🇯🇵 日本語</option>
+        <option value="zh">🇨🇳 中文</option>
+        <option value="ko">🇰🇷 한국어</option>
+        <option value="ar">🇸🇦 العربية</option>
+      </select>
+    </div>
+    <div class="settings-group" style="margin-left:auto;">
+      <span class="settings-label">⚥ Sono</span>
+      <div class="gender-toggle">
+        <button class="gender-btn active" data-gender="all" id="gAll">Tutti</button>
+        <button class="gender-btn" data-gender="m" id="gM">♂ Maschile</button>
+        <button class="gender-btn" data-gender="f" id="gF">♀ Femminile</button>
+      </div>
+    </div>
+    <div id="trans-status">
+      <span class="trans-spinner"></span>
+      <span class="settings-label" style="color:var(--gold)">Traduzione in corso…</span>
+    </div>
+  </div>
+
+  <div class="card fade-up delay-2">
+    <div id="app-root"></div>
+
+  </div>
+
+</div>
+
+<div class="share-modal-overlay" id="shareOverlay">
+  <div class="share-modal" id="shareModal">
+    <div class="share-modal-header" id="shareModalHeader">
+      <img class="share-modal-char-img" id="shareModalImg" src="" alt="" />
+      <div class="share-modal-name" id="shareModalName"></div>
+      <div class="share-modal-species" id="shareModalSpecies"></div>
+    </div>
+    <div class="share-modal-body">
+      <div class="share-url-box" id="shareUrlBox"></div>
+      <div class="share-btns">
+        <button class="share-btn-copy" id="shareCopyBtn">📋 Copia link</button>
+        <button class="share-btn-wa" id="shareWaBtn" title="WhatsApp">💬</button>
+      </div>
+      <button class="share-btn-close" id="shareCloseBtn">Chiudi</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   Beastars Quiz — traduzione automatica MyMemory (free)
+   Cambia lingua → tutto si traduce in automatico, zero API key
+   ══════════════════════════════════════════════════════════ */
+
+// ── Utilities ──────────────────────────────────────────────
+const clamp = v => Math.max(0, Math.min(1, v));
+const capitalize = s => s && (s[0].toUpperCase() + s.slice(1));
+function mulberry32(a){ return ()=>{ let t=a+=0x6D2B79F5; t=Math.imul(t^t>>>15,t|1); t^=t+Math.imul(t^t>>>7,t|61); return((t^t>>>14)>>>0)/4294967296; }; }
+function showToast(msg, ms=2400){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),ms); }
+
+// ── Claude AI Translator — single-call batch, JSON output ─────
+// Cache per lingua: TR_CACHE[lang] = { key: translatedString }
+const TR_CACHE = {};
+
+function trCacheKey(lang){ return `bq_tr_${lang}`; }
+function trLoadCache(lang){
+  if(TR_CACHE[lang]) return TR_CACHE[lang];
+  try{ const v=localStorage.getItem(trCacheKey(lang)); if(v){ TR_CACHE[lang]=JSON.parse(v); return TR_CACHE[lang]; } }catch(e){}
+  return null;
+}
+function trSaveCache(lang, obj){
+  TR_CACHE[lang]=obj;
+  try{ localStorage.setItem(trCacheKey(lang), JSON.stringify(obj)); }catch(e){}
+}
+
+// Translate an array of Italian strings in ONE Claude API call
+async function translateAll(arr, lang){
+  if(lang==='it') return arr;
+
+  // Check per-language cache
+  const cache = trLoadCache(lang) || {};
+  const missing = arr.filter(s => !cache[s]);
+
+  if(missing.length > 0){
+    const langNames = {en:'English',es:'Spanish',fr:'French',de:'German',
+      pt:'Portuguese',ru:'Russian',ja:'Japanese',zh:'Chinese',ko:'Korean',ar:'Arabic'};
+    const targetName = langNames[lang] || lang;
+
+    const prompt = `Translate the following Italian strings to ${targetName}. 
+Return ONLY a JSON array of translated strings, in the same order, no extra text or markdown.
+Each string must correspond exactly to the input string at the same index.
+
+Italian strings:
+${JSON.stringify(missing)}`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const raw = data?.content?.[0]?.text || '[]';
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const translated = JSON.parse(clean);
+      if(Array.isArray(translated) && translated.length === missing.length){
+        missing.forEach((s,i) => { cache[s] = translated[i]; });
+        trSaveCache(lang, cache);
+      }
+    } catch(e) {
+      console.warn('Translation failed:', e);
+      // fallback: use originals
+      missing.forEach(s => { cache[s] = s; });
+    }
+  }
+
+  return arr.map(s => cache[s] || s);
+}
+
+// Convenience: translate one string
+async function tOne(text, lang){
+  if(!text||!text.trim()||lang==='it') return text;
+  const [result] = await translateAll([text], lang);
+  return result;
+}
+
+// Alias for compatibility
+const tMany = translateAll;
+
+// ── Italian source strings ─────────────────────────────────
+const SRC = {
+  eyebrow:    '🐾 Fan Quiz • Beastars',
+  title:      'Che Beastars sei?',
+  sub:        'Rispondi alle domande e scopri il tuo archetipo animale, i tuoi tratti e molto altro.',
+  domanda:    'Domanda',
+  indietro:   'Indietro',
+  avanti:     'Avanti',
+  vediRis:    'Vedi Risultato',
+  ricomincia: 'Ricomincia',
+  archetipo:  'Il tuo archetipo',
+  tratti:     'Tratti',
+  analisi:    'Analisi',
+  salva:      'Salva JSON',
+  condividi:  'Condividi link',
+  linkCopied: 'Link copiato!',
+  carnivoro:  'Carnivoro', erbivoro: 'Erbivoro', onnivoro: 'Onnivoro',
+};
+const TRAIT_SRC = { aggression:'Aggressione', empathy:'Empatia', leadership:'Leadership', impulsivity:'Impulsività', curiosity:'Curiosità', discipline:'Disciplina', dietPreference:'Istinto' };
+// QT_SRC: each question has 3 opts array + per-option effects A/B/C
+// Effects calibrated to reflect specific character traits in Beastars
+const QT_SRC = [
+  {
+    text: 'Come preferisci trascorrere il tuo tempo libero?',
+    opts: ['Da solo, a riflettere in pace', 'Con pochi amici fidati, in modo informale', "Al centro dell'attenzione, più gente meglio è"],
+    // A→Legoshi/introverto, B→Haru/neutro, C→Louis/Juno/leader
+    optEffects: [
+      {aggression:-0.15, empathy:0.25, leadership:-0.25, discipline:0.15},
+      {empathy:0.15, curiosity:0.10},
+      {aggression:0.10, leadership:0.35, impulsivity:0.10}
+    ]
+  },
+  {
+    text: "Senti l'istinto premere. Come lo gestisci?",
+    opts: ['Lo reprimo con forza: i miei valori vengono prima', 'Lo riconosco e cerco un equilibrio sano', 'Lo assecondo — è parte di me, perché combatterlo?'],
+    // A→Legoshi/disciplina, B→Gohin/metodo, C→Bill/istinto
+    optEffects: [
+      {discipline:0.40, empathy:0.20, aggression:-0.20, impulsivity:-0.30},
+      {discipline:0.25, curiosity:0.20, empathy:0.15},
+      {aggression:0.35, impulsivity:0.40, dietPreference:0.30, discipline:-0.25}
+    ]
+  },
+  {
+    text: 'Sei a tavola: cosa scegli senza pensarci?',
+    opts: ['Verdure fresche, piatto leggero e colorato', "Un piatto completo: un po' di tutto", 'Carne — più è succulenta, meglio è'],
+    // A→erbivoro/Haru, B→neutro/Gohin, C→carnivoro/Bill/Legoshi
+    optEffects: [
+      {dietPreference:-0.45, discipline:0.10},
+      {dietPreference:0.05},
+      {dietPreference:0.50, aggression:0.15, impulsivity:0.10}
+    ]
+  },
+  {
+    text: 'Qualcuno più debole viene maltrattato davanti a te. Cosa fai?',
+    opts: ['Intervengo subito, anche a rischio personale', 'Cerco un modo per aiutare senza rischiare lo scontro', 'Resto in disparte: non sono affari miei'],
+    // A→Legoshi/Juno protettivo, B→Haru/mediazione, C→Bill/egoismo
+    optEffects: [
+      {empathy:0.40, aggression:0.15, leadership:0.20, impulsivity:0.15},
+      {empathy:0.30, curiosity:0.15, leadership:0.10},
+      {empathy:-0.30, aggression:0.20, discipline:0.05}
+    ]
+  },
+  {
+    text: 'In una situazione di crisi, quale ruolo assumi?',
+    opts: ['Sto in disparte e aspetto che qualcuno guidi', 'Collaboro, porto il mio contributo senza mettermi in primo piano', 'Prendo il controllo: il gruppo ha bisogno di una guida'],
+    // A→Legoshi/introverso, B→Haru/collaborativo, C→Louis/Juno/leader
+    optEffects: [
+      {leadership:-0.30, discipline:0.10, empathy:0.10},
+      {leadership:0.10, empathy:0.25, curiosity:0.10},
+      {leadership:0.50, aggression:0.15, discipline:0.25, impulsivity:0.10}
+    ]
+  },
+  {
+    text: 'Hai un obiettivo. Come procedi?',
+    opts: ['Pianifico ogni dettaglio prima di muovere un passo', 'Ho un piano di massima e mi adatto strada facendo', 'Mi lancio subito: penso dopo'],
+    // A→Gohin/Louis piano, B→Juno/flessibile, C→Bill/impulsivo
+    optEffects: [
+      {discipline:0.45, impulsivity:-0.35, leadership:0.20},
+      {discipline:0.15, curiosity:0.20, impulsivity:0.05},
+      {impulsivity:0.40, aggression:0.15, discipline:-0.30}
+    ]
+  },
+  {
+    text: 'Come ti rapporti con le regole della società?',
+    opts: ['Le regole proteggono tutti: le rispetto sempre', 'Le rispetto se hanno senso, ma valuto caso per caso', 'Le regole sono gabbie: la libertà viene prima'],
+    // A→Gohin/disciplina, B→Legoshi/morale personale, C→Bill/Haru autonomia
+    optEffects: [
+      {discipline:0.45, aggression:-0.15, leadership:0.15},
+      {discipline:0.15, curiosity:0.20, empathy:0.15},
+      {discipline:-0.30, impulsivity:0.25, aggression:0.20}
+    ]
+  },
+  {
+    text: 'Qualcuno che ami è in pericolo. Come reagisci?',
+    opts: ['Un freddo calcolo: valuto la situazione e agisco con metodo', "Sento l'adrenalina, ma resto lucido", "Il sangue mi bolle: agisco d'istinto per proteggerlo"],
+    // A→Gohin/Louis, B→Juno, C→Legoshi/Bill
+    optEffects: [
+      {discipline:0.30, impulsivity:-0.25, leadership:0.20},
+      {empathy:0.25, leadership:0.15, aggression:0.10},
+      {aggression:0.35, impulsivity:0.35, empathy:0.20, discipline:-0.10}
+    ]
+  },
+  {
+    text: 'Come vivi la tua natura più profonda?',
+    opts: ['È una parte oscura che cerco di tenere sotto controllo', 'La accetto ma lavoro per bilanciarla con i miei valori', 'La abbraccio con orgoglio — è ciò che sono'],
+    // A→Legoshi, B→Juno/Gohin, C→Bill
+    optEffects: [
+      {discipline:0.35, empathy:0.15, aggression:-0.10, impulsivity:-0.20},
+      {empathy:0.20, leadership:0.20, discipline:0.20},
+      {aggression:0.30, impulsivity:0.25, dietPreference:0.20, discipline:-0.10}
+    ]
+  },
+  {
+    text: 'Qual è la tua forza più autentica?',
+    opts: ['La capacità di capire e sentire gli altri in profondità', 'La determinazione: una volta che mi prefiggo qualcosa, arrivo alla meta', 'La spontaneità: so vivere il momento senza rimpianti'],
+    // A→Legoshi/Haru empatia, B→Louis/Juno/Gohin, C→Bill/Haru
+    optEffects: [
+      {empathy:0.40, discipline:0.10, leadership:-0.10},
+      {leadership:0.35, discipline:0.30, impulsivity:-0.10},
+      {impulsivity:0.30, curiosity:0.20, discipline:-0.15}
+    ]
+  },
+  {
+    text: 'Un conflitto con qualcuno che rispetti. Come lo gestisci?',
+    opts: ['Lo evito — aspetto che passi da sola', "Cerco il dialogo per capire il punto di vista dell'altro", 'Lo affronto direttamente: dico tutto quello che penso'],
+    // A→Legoshi/evita, B→Haru/Juno, C→Louis/Bill
+    optEffects: [
+      {aggression:-0.20, empathy:0.10, discipline:0.10, impulsivity:-0.15},
+      {empathy:0.35, leadership:0.15, curiosity:0.15},
+      {aggression:0.30, leadership:0.25, impulsivity:0.20}
+    ]
+  },
+  {
+    text: 'Cosa ti spinge davvero ad agire?',
+    opts: ['Proteggere le persone che amo, anche a mio danno', 'Dimostrare il mio valore e raggiungere il massimo', 'Il desiderio di vivere intensamente, senza filtri'],
+    // A→Legoshi, B→Louis/Juno, C→Bill/Haru
+    optEffects: [
+      {empathy:0.40, aggression:-0.10, leadership:0.10, impulsivity:0.10},
+      {leadership:0.40, discipline:0.25, aggression:0.15},
+      {impulsivity:0.35, curiosity:0.25, dietPreference:0.15, discipline:-0.10}
+    ]
+  },
+  {
+    text: 'Come ti comporti con le persone che ami?',
+    opts: ['Sono sempre presente, mi assicuro che stiano bene', 'Porto i miei legami nel cuore ma ho anche bisogno di spazio', 'Tendo ad essere intenso: mi lego profondamente e faccio fatica a lasciar andare'],
+    // A→Jack/altamente empatico, B→Legoshi/bilanciato, C→Riz/possessivo
+    optEffects: [
+      {empathy:0.45, leadership:0.10, discipline:0.20, aggression:-0.15},
+      {empathy:0.20, curiosity:0.15, discipline:0.15},
+      {empathy:0.20, aggression:0.25, impulsivity:0.30, discipline:-0.10, dietPreference:0.15}
+    ]
+  },
+  {
+    text: 'Qualcuno sfida la tua visione del mondo. Come reagisci?',
+    opts: ['Lo ascolto con curiosità: mi piace essere messo alla prova', 'Mi difendo con logica e argomenti precisi', 'Lo ignoro — la mia prospettiva non ha bisogno di validazione'],
+    // A→Pina/ENTP curioso, B→Melon/INTJ freddo, C→Bill/sicuro di sé
+    optEffects: [
+      {curiosity:0.45, impulsivity:0.20, empathy:0.10, discipline:-0.10},
+      {curiosity:0.30, discipline:0.30, aggression:0.10, leadership:0.20},
+      {aggression:0.20, discipline:0.15, empathy:-0.20, leadership:0.10}
+    ]
+  },
+  {
+    text: 'Come vivi il fatto di essere "diverso" dagli altri?',
+    opts: ['Lo trasformo in un vantaggio: la mia unicità è il mio punto di forza', 'Lo accetto con fatica, cercando il mio posto tra le crepe della società', 'Mi ha reso cinico: il mondo non capisce chi non si adatta alle sue regole'],
+    // A→Pina/orgoglio, B→Legoshi/Riz, C→Melon/nichilismo
+    optEffects: [
+      {impulsivity:0.20, curiosity:0.30, empathy:0.10, leadership:0.20},
+      {empathy:0.20, discipline:0.20, aggression:0.10, impulsivity:-0.10},
+      {aggression:0.35, empathy:-0.25, curiosity:0.30, discipline:0.20, dietPreference:0.10}
+    ]
+  },
+];
+
+// Active (possibly translated) copies
+let T   = {...SRC};
+let TT  = {...TRAIT_SRC}; // trait labels
+let TQ  = QT_SRC.map(q=>({...q, opts:[...q.opts]})); // deep copy
+
+// ── Data ───────────────────────────────────────────────────
+const TRAIT_AXES = ['aggression','empathy','leadership','impulsivity','curiosity','discipline','dietPreference'];
+// ── CDN images from Beastars Fandom Wiki ─────────────────────
+// URLs computed via MD5(filename) following MediaWiki CDN structure
+const CDN = 'https://static.wikia.nocookie.net/beastars-eng/images';
+const IMGS = {
+  legoshi: CDN + '/b/b8/Legoshi_(Anime).png/revision/latest/scale-to-width-down/300',
+  haru:    CDN + '/9/97/Haru_(Anime).png/revision/latest/scale-to-width-down/300',
+  louis:   CDN + '/7/77/Louis_(Anime).png/revision/latest/scale-to-width-down/300',
+  gohin:   CDN + '/a/af/Gohin_(Anime).png/revision/latest/scale-to-width-down/300',
+  bill:    CDN + '/3/3f/Bill_(Anime).png/revision/latest/scale-to-width-down/300',
+  juno:    CDN + '/6/6e/Juno_(Anime).png/revision/latest/scale-to-width-down/300',
+  jack:    CDN + '/e/ea/Jack_(Anime).png/revision/latest/scale-to-width-down/300',
+  riz:     CDN + '/3/30/Riz_(Anime).png/revision/latest/scale-to-width-down/300',
+  pina:    CDN + '/2/2a/Pina_(Anime).png/revision/latest/scale-to-width-down/300',
+  melon:   CDN + '/b/b5/Melon_(Anime).png/revision/latest/scale-to-width-down/300',
+};
+
+// ── ARCHETYPES ────────────────────────────────────────────────
+// Trait axes: aggression, empathy, leadership, impulsivity, curiosity, discipline, dietPreference
+// Vectors calibrated on: MBTI analysis (CBR, AnimeRants), Beastars wiki, Wikipedia character descriptions
+// INFP=Legoshi, ENFP=Haru, ENTJ=Louis, ESTJ=Gohin, ESFP=Bill, ENFJ=Juno
+const ARCHETYPES = [
+  {
+    id:'legoshi', gender:'m', name:'Legoshi', species:'Lupo Grigio', mbti:'INFP',
+    img: IMGS.legoshi, color:'#4a6fa5',
+    enneagram: 'Tipo 9 — Il Pacificatore',
+    quote: '"Sono sempre stato così. Sono abituato ad essere temuto e odiato. Sopravviverò."',
+    desc: 'INFP introverso e profondamente morale: lotta ogni giorno contro gli istinti carnivori con rigore estremo. La sua forza autentica è empatica — vuole proteggere, non cacciare. Detective autodidatta, vive la sua identità come un campo di battaglia interiore permanente.',
+    vector:{aggression:0.18, empathy:0.94, leadership:0.16, impulsivity:0.30, curiosity:0.68, discipline:0.72, dietPreference:0.80}
+  },
+  {
+    id:'haru', gender:'f', name:'Haru', species:'Coniglio Nano', mbti:'ENFP',
+    img: IMGS.haru, color:'#b07d8a',
+    enneagram: "Tipo 7 — L'Entusiasta",
+    quote: '"Non sai com\'è vivere in pericolo costante. Ma io ci sono abituata."',
+    desc: 'ENFP spontanea e sfacciatamente autentica: si rifiuta di essere la preda fragile che la società vuole. Sfida le aspettative tenendo tutti a distanza finché non si fida davvero. La sua "sincerità infantile" è la sua armatura più forte.',
+    vector:{aggression:0.14, empathy:0.82, leadership:0.44, impulsivity:0.68, curiosity:0.58, discipline:0.28, dietPreference:0.06}
+  },
+  {
+    id:'louis', gender:'m', name:'Louis', species:'Cervo Rosso', mbti:'ENTJ',
+    img: IMGS.louis, color:'#8b5e3c',
+    enneagram: 'Tipo 3 — Il Realizzatore',
+    quote: '"Se hai una convinzione, brillerai come una stella — anche se sei rude o immaturo."',
+    desc: 'ENTJ carismatico e tirannico con sé stesso: leader naturale che porta il peso di aspettative impossibili. Sotto la fredda determinazione si nasconde una profonda fragilità e un senso di giustizia che alla fine prevale sempre, anche al costo della propria vita.',
+    vector:{aggression:0.70, empathy:0.50, leadership:0.97, impulsivity:0.56, curiosity:0.70, discipline:0.90, dietPreference:0.08}
+  },
+  {
+    id:'gohin', gender:'m', name:'Gohin', species:'Panda Gigante', mbti:'ESTJ',
+    img: IMGS.gohin, color:'#3a7a3a',
+    enneagram: 'Tipo 1 — Il Riformatore',
+    quote: '"I tuoi istinti non ti definiscono. Sei tu a definire te stesso."',
+    desc: 'ESTJ rigoroso e metodico: psichiatra di strada che cura i carnivori più pericolosi con pugno di ferro e cuore d\'oro. Non tollera scuse ma non abbandona nessuno. Il suo metodo è brutale perché sa che la gentilezza da sola non basta.',
+    vector:{aggression:0.40, empathy:0.70, leadership:0.70, impulsivity:0.10, curiosity:0.38, discipline:0.96, dietPreference:0.45}
+  },
+  {
+    id:'bill', gender:'m', name:'Bill', species:'Tigre del Bengala', mbti:'ESFP',
+    img: IMGS.bill, color:'#c87941',
+    enneagram: 'Tipo 8 — Il Dominatore',
+    quote: '"Sono una tigre. È inutile fingere che la carne non mi interessi."',
+    desc: 'ESFP esuberante e fiero della propria natura carnivora: abbraccia gli istinti che Legoshi teme e non ne fa segreto. Leale ai compagni, furbo nel mercato nero — dimostra che persino il più istintivo dei predatori può avere un codice d\'onore.',
+    vector:{aggression:0.90, empathy:0.28, leadership:0.60, impulsivity:0.92, curiosity:0.52, discipline:0.25, dietPreference:0.97}
+  },
+  {
+    id:'juno', gender:'f', name:'Juno', species:'Lupa Grigia', mbti:'ENFJ',
+    img: IMGS.juno, color:'#7a5a9a',
+    enneagram: 'Tipo 2 — Il Donatore',
+    quote: '"I carnivori devono dimostrare di poter proteggere gli erbivori, non solo spaventarli."',
+    desc: 'ENFJ ambiziosa e profondamente connessa con gli altri: vuole diventare Beastar non per gloria personale ma per costruire pace tra le specie. Abbraccia la sua natura carnivora con orgoglio e usa il carisma per unire, non per dividere.',
+    vector:{aggression:0.52, empathy:0.76, leadership:0.92, impulsivity:0.40, curiosity:0.74, discipline:0.82, dietPreference:0.84}
+  },
+  {
+    id:'jack', gender:'m', name:'Jack', species:'Labrador Retriever', mbti:'ESFJ',
+    img: IMGS.jack, color:'#c8a84b',
+    enneagram: 'Tipo 2 — L\'Amico Fedele',
+    quote: '"Legoshi, non devi affrontare tutto da solo. Sono qui."',
+    desc: 'ESFJ leale e instancabilmente positivo: il migliore amico che chiunque vorrebbe. Jack è il collante emotivo del gruppo — percepisce quando qualcuno sta male prima che lo dica, e trova sempre le parole giuste per tirare su il morale.',
+    vector:{aggression:0.10, empathy:0.96, leadership:0.28, impulsivity:0.18, curiosity:0.52, discipline:0.58, dietPreference:0.30}
+  },
+  {
+    id:'riz', gender:'m', name:'Riz', species:'Orso Bruno', mbti:'INFJ',
+    img: IMGS.riz, color:'#5a3e2b',
+    enneagram: 'Tipo 4 — Il Romantico Oscuro',
+    quote: '"Ho solo voluto condividere qualcosa di vero con lui. È questo che fanno gli amici, no?"',
+    desc: 'INFJ di grande intensità emotiva: Riz costruisce legami profondi ma li distorce in modo pericoloso. La sua complessità sta nel confondere il possesso con l\'affetto e l\'istinto con la connessione. Un personaggio che interroga i confini tra amicizia, colpa e autoinganno.',
+    vector:{aggression:0.78, empathy:0.42, leadership:0.22, impulsivity:0.38, curiosity:0.35, discipline:0.50, dietPreference:0.98}
+  },
+  {
+    id:'pina', gender:'m', name:'Pina', species:'Pecora di Dall', mbti:'ENTP',
+    img: IMGS.pina, color:'#4a9a8a',
+    enneagram: 'Tipo 7 — Il Provocatore',
+    quote: '"Perché essere ordinari quando puoi essere straordinari? La vita è troppo corta per la mediocrità."',
+    desc: 'ENTP narcisista e brillante: Pina è il personaggio che ama sé stesso senza riserve e lo fa con tale stile da essere impossibile da odiare. Provocatore nato, fa amicizia anche con i suoi predatori — non per coraggio, ma per pura sicurezza in sé stesso.',
+    vector:{aggression:0.18, empathy:0.30, leadership:0.55, impulsivity:0.78, curiosity:0.88, discipline:0.20, dietPreference:0.04}
+  },
+  {
+    id:'melon', gender:'m', name:'Melon', species:'Ibrido Gazzella/Leopardo', mbti:'INTJ',
+    img: IMGS.melon, color:'#2d6e5a',
+    enneagram: 'Tipo 5 — Il Nichilista',
+    quote: '"Sono nato sbagliato — né carnivoro né erbivoro. Così ho deciso di essere qualcosa di peggio."',
+    desc: 'INTJ freddo e calcolatore: Melon abbraccia il nichilismo come filosofia di vita. Ibrido rifiutato da entrambe le specie, ha trasformato il dolore in arma. Il personaggio più intellettualmente pericoloso di Beastars — ogni sua mossa è studiata con precisione chirurgica.',
+    vector:{aggression:0.85, empathy:0.04, leadership:0.80, impulsivity:0.15, curiosity:0.90, discipline:0.85, dietPreference:0.55}
+  },
+];
+function emptyVec(){ const v={}; TRAIT_AXES.forEach(a=>v[a]=0); return v; }
+function vecDist(a,b){ let s=0; TRAIT_AXES.forEach(k=>{const d=(a[k]||0)-(b.vector?b.vector[k]||0:b[k]||0);s+=d*d;}); return Math.sqrt(s); }
+function speciesLabel(vec){
+  const byDiet=[...ARCHETYPES].sort((x,y)=>Math.abs(x.vector.dietPreference-vec.dietPreference)-Math.abs(y.vector.dietPreference-vec.dietPreference));
+  const byAgg =[...ARCHETYPES].sort((x,y)=>Math.abs(x.vector.aggression-vec.aggression)-Math.abs(y.vector.aggression-vec.aggression));
+  const p=byDiet[0].species; const s=(byAgg[0].species===p)?(byAgg[1]?byAgg[1].species:byAgg[0].species):byAgg[0].species;
+  return capitalize(p)+'-'+capitalize(s);
+}
+
+function buildQuestions(seed, count){
+  const rand=mulberry32(seed);
+
+  // Fisher-Yates shuffle — guarantees no duplicates
+  const pool=[...TQ];
+  for(let i=pool.length-1;i>0;i--){
+    const j=Math.floor(rand()*(i+1));
+    [pool[i],pool[j]]=[pool[j],pool[i]];
+  }
+  const selected=pool.slice(0, Math.min(count, pool.length));
+
+  return selected.map((tpl,i)=>{
+    const opts=tpl.opts.map((optText,idx)=>{
+      // Use per-option effects if available (new format), else fall back to old linear weights
+      const src = tpl.optEffects ? tpl.optEffects[idx] : (() => {
+        const weights=[0.0,0.5,1.0], lv=weights[idx], fx={};
+        Object.entries(tpl.effects||{}).forEach(([k,v])=>{ fx[k]=clamp((v*lv)+(rand()-0.5)*0.12); });
+        return fx;
+      })();
+      return {id:`q${i}-o${idx}`, text:optText, effects:src};
+    });
+    return {id:`q${i}`, q:tpl.text, opts};
+  });
+}
+
+// ── App state ──────────────────────────────────────────────
+const appRoot       = document.getElementById('app-root');
+const uilangSelect  = document.getElementById('uilang');
+const transStatus   = document.getElementById('trans-status');
+
+let currentLang  = 'it';
+let playerGender = 'all'; // 'all' | 'm' | 'f'
+let seed         = Math.floor(Math.random()*1e9);
+let QUESTIONS    = buildQuestions(seed, 12);
+let index        = 0;
+let answers      = {};
+let resultCache  = null;
+
+// Gender filter helpers
+function filteredArchetypes(){
+  if(playerGender === 'all') return ARCHETYPES;
+  return ARCHETYPES.filter(a => a.gender === playerGender);
+}
+
+// ── Shared result detection ───────────────────────────────
+// ?shared=<charId>&from=<name> → show friend's result before quiz
+let sharedPreview = null; // {char, fromName}
+(()=>{
+  const p = new URLSearchParams(location.search);
+  const sharedId   = p.get('shared');
+  const fromName   = p.get('from') || null;
+  if(sharedId){
+    const char = ARCHETYPES.find(a=>a.id===sharedId);
+    if(char) sharedPreview = {char, fromName};
+  }
+})();
+
+// Restore
+(()=>{
+  const p=new URLSearchParams(location.search);
+  const s=p.get('seed'), a=p.get('answers');
+  if(s && /^\d+$/.test(s)){ seed=parseInt(s); }
+  const saved=localStorage.getItem('bq_v3');
+  if(!s&&saved){ try{ const obj=JSON.parse(saved); answers=obj.answers||{}; index=Math.max(0,parseInt(obj.index)||0); seed=parseInt(obj.seed)||seed; }catch(e){} }
+  if(a){ try{ answers=JSON.parse(decodeURIComponent(a)); }catch(e){} }
+  QUESTIONS=buildQuestions(seed,12);
+
+  const safe={};
+  QUESTIONS.forEach(q=>{
+    const aid=answers[q.id];
+    if(aid && q.opts.some(o=>o.id===aid)) safe[q.id]=aid;
+  });
+  answers=safe;
+
+  index=Math.min(Math.max(0,index), QUESTIONS.length-1);
+})();
+
+function saveState(){
+  try{ localStorage.setItem('bq_v3',JSON.stringify({seed,answers,index})); }catch(e){}
+  try{
+    const u=new URL(location.href);
+    u.searchParams.set('seed',seed);
+    u.searchParams.set('answers',encodeURIComponent(JSON.stringify(answers)));
+    history.replaceState({},'',u);
+  }catch(e){ /* srcdoc/iframe context — skip URL update */ }
+}
+
+// ── Language change ────────────────────────────────────────
+uilangSelect.onchange = async () => {
+  const lang = uilangSelect.value;
+  if(lang === currentLang) return;
+  currentLang = lang;
+
+  transStatus.classList.add('visible');
+  try {
+    if(lang === 'it'){
+      T=({...SRC}); TT=({...TRAIT_SRC}); TQ=QT_SRC.map(q=>({...q, opts:[...q.opts]}));
+    } else {
+      // Build one big flat list of all strings to translate
+      const uiKeys=['title','sub','domanda','indietro','avanti','vediRis','ricomincia','archetipo','tratti','analisi','salva','condividi','linkCopied','carnivoro','erbivoro','onnivoro'];
+      const traitKeys=Object.keys(TRAIT_SRC);
+      const qTexts=QT_SRC.map(q=>q.text);
+      const optTexts=QT_SRC.flatMap(q=>q.opts);
+
+      const allStrings=[
+        ...uiKeys.map(k=>SRC[k]),
+        ...traitKeys.map(k=>TRAIT_SRC[k]),
+        ...qTexts,
+        ...optTexts
+      ];
+
+      // Single API call for everything
+      const translated = await translateAll(allStrings, lang);
+
+      let i=0;
+      T={...SRC};
+      uiKeys.forEach(k=>{ T[k]=translated[i++]; });
+      T.eyebrow='🐾 Fan Quiz • Beastars';
+
+      TT={};
+      traitKeys.forEach(k=>{ TT[k]=translated[i++]; });
+
+      const tQTexts=qTexts.map(()=>translated[i++]);
+      let optIdx=i;
+      TQ=QT_SRC.map((q,qi)=>{
+        const opts=q.opts.map(()=>translated[optIdx++]);
+        return {...q, text:tQTexts[qi], opts};
+      });
+      i=optIdx;
+    }
+
+    QUESTIONS=buildQuestions(seed,12);
+
+    document.getElementById('h-eyebrow').textContent=T.eyebrow;
+    document.getElementById('h-title').textContent=T.title;
+    document.getElementById('h-sub').textContent=T.sub;
+
+    if(resultCache) await renderResult(resultCache);
+    else render();
+
+  } finally {
+    transStatus.classList.remove('visible');
+  }
+};
+
+// ── Shared preview banner ─────────────────────────────────
+function renderSharedBanner(){
+  if(!sharedPreview) return;
+  const {char, fromName} = sharedPreview;
+  const banner = el('share-preview fade-up');
+  banner.style.setProperty('--sp-color', char.color);
+  const inner = el('share-preview-inner');
+
+  const imgW = el('share-preview-img');
+  const img = document.createElement('img');
+  img.src = char.img; img.alt = char.name;
+  img.onerror = ()=>{ imgW.innerHTML = '<div style="font-size:40px;padding:20px;text-align:center">'+charEmoji(char.id)+'</div>'; };
+  imgW.appendChild(img);
+  inner.appendChild(imgW);
+
+  const body = el('share-preview-body');
+  const who = el('share-preview-who');
+  who.textContent = fromName ? fromName + ' è...' : 'Il tuo amico è...';
+  body.appendChild(who);
+  const nm = el('share-preview-name'); nm.textContent = char.name; body.appendChild(nm);
+  const sp2 = el('share-preview-species'); sp2.textContent = char.species; body.appendChild(sp2);
+  const cta = document.createElement('button');
+  cta.className = 'share-preview-cta';
+  cta.style.background = char.color;
+  cta.textContent = '🐾 Scopri chi sei tu!';
+  cta.onclick = () => { banner.remove(); sharedPreview = null; };
+  body.appendChild(cta);
+  inner.appendChild(body);
+  banner.appendChild(inner);
+
+  // Inject before the card
+  const card = document.querySelector('.card');
+  if(card) card.parentNode.insertBefore(banner, card);
+}
+
+// ── Render quiz ────────────────────────────────────────────
+function render(){
+  resultCache = null;
+  appRoot.innerHTML = '';
+  const q=QUESTIONS[index];
+  const pct=Math.round(((index+1)/QUESTIONS.length)*100);
+  const hasAnswer = !!answers[q.id];
+
+  // Progress
+  const pw=el('progress-wrap');
+  const bg=el('progress-bar-bg'), fill=el('progress-bar-fill'); fill.style.width='0%'; bg.appendChild(fill); pw.appendChild(bg);
+  const lbl=el('progress-label'); lbl.textContent=`${index+1} / ${QUESTIONS.length}`; pw.appendChild(lbl);
+  appRoot.appendChild(pw); requestAnimationFrame(()=>fill.style.width=pct+'%');
+
+  // Question
+  const qa=el('question-area fade-up');
+  const tag=el('question-tag'); tag.textContent=`${T.domanda} ${index+1}`; qa.appendChild(tag);
+  const qt=el('question-text'); qt.textContent=q.q; qa.appendChild(qt);
+
+  // Options
+  const optsEl=el('opts'); ['A','B','C'].forEach((letter,i)=>{
+    const opt=q.opts[i];
+    const b=document.createElement('button'); b.className='opt'+(answers[q.id]===opt.id?' sel':'');
+    const marker=el('opt-marker'); b.appendChild(marker);
+    const body=el('opt-body');
+    const lDiv=el('opt-letter'); lDiv.textContent=letter; body.appendChild(lDiv);
+    const txt=document.createElement('span'); txt.textContent=opt.text; body.appendChild(txt);
+    b.appendChild(body);
+    b.onclick=()=>{
+      answers[q.id]=opt.id; saveState(); render();
+      // Auto-advance after short delay if not last question
+      if(index < QUESTIONS.length-1){
+        setTimeout(()=>{ index++; render(); }, 420);
+      }
+    };
+    b.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ b.click(); } };
+    optsEl.appendChild(b);
+  });
+  qa.appendChild(optsEl); appRoot.appendChild(qa);
+
+  // Nav
+  const nav=el('nav-bar');
+  const prevBtn=mk(T.indietro,'ghost');
+  prevBtn.disabled=index===0;
+  prevBtn.onclick=()=>{ if(index>0){ index--; render(); } };
+  nav.appendChild(prevBtn);
+
+  const nextLabel=index===QUESTIONS.length-1?`${T.vediRis} →`:`${T.avanti} →`;
+  const nextBtn=mk(nextLabel,'primary');
+  // Disabled until answer selected
+  if(!hasAnswer){ nextBtn.disabled=true; nextBtn.style.opacity='0.4'; nextBtn.style.cursor='not-allowed'; }
+  nextBtn.onclick=()=>{
+    if(!answers[q.id]){
+      // Shake & pulse hint
+      nextBtn.classList.add('shake');
+      optsEl.classList.add('hint');
+      setTimeout(()=>{ nextBtn.classList.remove('shake'); optsEl.classList.remove('hint'); }, 600);
+      return;
+    }
+    if(index<QUESTIONS.length-1){ index++; render(); } else finish();
+  };
+  nav.appendChild(nextBtn);
+  nav.appendChild(sp());
+  const resetBtn=mk(`↺ ${T.ricomincia}`,'danger'); resetBtn.onclick=()=>resetQuiz(); nav.appendChild(resetBtn);
+  appRoot.appendChild(nav);
+}
+
+// ── Finish / result ────────────────────────────────────────
+async function finish(){
+  // Ensure every question has a valid answer (prevent URL/localStorage injection)
+  const allAnswered = QUESTIONS.every(q => {
+    const aid = answers[q.id];
+    return aid && q.opts.some(o => o.id === aid); // answer must match an actual option of THIS question
+  });
+  if(!allAnswered){
+    // Find first unanswered and go back to it
+    const firstMissed = QUESTIONS.findIndex(q => !answers[q.id] || !q.opts.some(o=>o.id===answers[q.id]));
+    if(firstMissed !== -1){ index=firstMissed; render(); }
+    return;
+  }
+
+  // Accumulate raw scores
+  const raw=emptyVec();
+  QUESTIONS.forEach(q=>{
+    const aid=answers[q.id];
+    const opt=q.opts.find(o=>o.id===aid); // already validated above
+    Object.entries(opt.effects).forEach(([k,v])=>{ raw[k]=(raw[k]||0)+v; });
+  });
+  // Normalise to [0,1] using min-max across all axes
+  const vec=emptyVec();
+  TRAIT_AXES.forEach(k=>{
+    // Each question contributes -0.5..+0.5 approximately; we normalise to 0..1
+    vec[k]=clamp((raw[k]/QUESTIONS.length)*2.0 + 0.35);
+  });
+  const scored=filteredArchetypes().map(a=>({...a,dist:vecDist(vec,a)})).sort((x,y)=>x.dist-y.dist);
+  resultCache={vec, top:scored[0]};
+  await renderResult(resultCache);
+}
+
+async function renderResult({vec, top}){
+  // ── Diet ────────────────────────────────────────────────────
+  const dietKey=vec.dietPreference>=0.60?'carnivoro':vec.dietPreference<=0.35?'erbivoro':'onnivoro';
+  const dietEmoji=vec.dietPreference>=0.60?'🥩':vec.dietPreference<=0.35?'🌿':'🍽️';
+  const dietName=T[dietKey]||SRC[dietKey];
+  const dietCategory=`${dietEmoji} ${dietName}`;
+
+  // ── Similarity scores (cosine-like: 1 - normalised Euclidean) ─
+  const MAX_DIST=Math.sqrt(TRAIT_AXES.length);
+  const scored=[...filteredArchetypes()].map(a=>({
+    ...a, pct:Math.round((1-vecDist(vec,a)/MAX_DIST)*100)
+  })).sort((a,b)=>b.pct-a.pct);
+
+  // ── Translate dynamic strings ───────────────────────────────
+  const [desc, quote, simTitle, matchLabel] = currentLang==='it'
+    ? [top.desc, top.quote, 'Affinità con i personaggi', 'Il tuo personaggio']
+    : await Promise.all([
+        tOne(top.desc, currentLang),
+        tOne(top.quote, currentLang),
+        tOne('Affinità con i personaggi', currentLang),
+        tOne('Il tuo personaggio', currentLang),
+      ]);
+  const enneagramStr = currentLang==='it' ? top.enneagram : await tOne(top.enneagram, currentLang);
+  const speciesStr   = currentLang==='it' ? top.species   : await tOne(top.species, currentLang);
+
+  const explIT=`I tuoi tratti dominanti: Empatia ${Math.round(vec.empathy*100)}%, Leadership ${Math.round(vec.leadership*100)}%, Disciplina ${Math.round(vec.discipline*100)}%.\n\nHai una somiglianza del ${scored[0].pct}% con ${top.name}. Il tuo istinto alimentare è ${SRC[dietKey].toLowerCase()}.\n\nRisultati procedurali: ogni sessione è unica e riflette la tua personalità in quel momento.`;
+  const explanation = currentLang!=='it' ? await tOne(explIT, currentLang) : explIT;
+
+  appRoot.innerHTML='';
+
+  // ── HERO CARD ────────────────────────────────────────────────
+  const hero=el('result-hero fade-up');
+  hero.style.setProperty('--char-color', top.color);
+  const heroInner=el('result-hero-inner');
+
+  // Image panel
+  const imgWrap=el('char-img-wrap');
+  imgWrap.style.setProperty('--char-color', top.color);
+  const img=document.createElement('img');
+  img.alt=top.name; img.className='loading';
+  img.onload=()=>img.classList.remove('loading');
+  img.onerror=()=>{
+    imgWrap.innerHTML='';
+    const ph=el('char-img-placeholder');
+    ph.textContent=charEmoji(top.id);
+    imgWrap.appendChild(ph);
+  };
+  img.src=top.img;
+  imgWrap.appendChild(img);
+  heroInner.appendChild(imgWrap);
+
+  // Info panel
+  const info=el('char-info');
+  const mLbl=el('char-match-label'); mLbl.textContent=matchLabel; info.appendChild(mLbl);
+  const nameEl=el('char-name'); nameEl.textContent=top.name; info.appendChild(nameEl);
+  const spEl=el('char-species'); spEl.textContent=speciesStr; info.appendChild(spEl);
+  const badges=el('char-badges');
+  const mbtiB=el('char-mbti-badge'); mbtiB.style.background=top.color; mbtiB.textContent=`${top.mbti}`; badges.appendChild(mbtiB);
+  const ennB=el('char-enn-badge'); ennB.textContent=enneagramStr; badges.appendChild(ennB);
+  info.appendChild(badges);
+  const qEl=el('char-quote'); qEl.textContent=quote; info.appendChild(qEl);
+  const dEl=el('char-desc'); dEl.textContent=desc; info.appendChild(dEl);
+  const dbEl=el('diet-badge'); dbEl.textContent=dietCategory; info.appendChild(dbEl);
+  heroInner.appendChild(info);
+  hero.appendChild(heroInner);
+  appRoot.appendChild(hero);
+
+  // ── SIMILARITY BARS ─────────────────────────────────────────
+  const ss=el('similarity-section fade-up delay-1');
+  const sstitle=el('section-title'); sstitle.textContent=simTitle; ss.appendChild(sstitle);
+  scored.forEach((a,i)=>{
+    const row=el('sim-row');
+    const nm=el('sim-name'); nm.textContent=a.name; row.appendChild(nm);
+    const bg=el('sim-bar-bg'); const fill=el('sim-bar-fill');
+    fill.style.width='0%'; fill.style.background=a.color; bg.appendChild(fill); row.appendChild(bg);
+    const pct=el('sim-pct'); pct.textContent=a.pct+'%'; row.appendChild(pct);
+    ss.appendChild(row);
+    requestAnimationFrame(()=>setTimeout(()=>{ fill.style.width=a.pct+'%'; }, i*70+100));
+  });
+  appRoot.appendChild(ss);
+
+  // ── TRAIT BARS ───────────────────────────────────────────────
+  const ts=el('traits-section fade-up delay-2');
+  const stitle=el('section-title'); stitle.textContent=T.tratti; ts.appendChild(stitle);
+  TRAIT_AXES.forEach(k=>{
+    const row=el('trait-row');
+    const name=el('trait-name'); name.textContent=TT[k]||k; row.appendChild(name);
+    const bg=el('trait-bar-bg'), fill=el('trait-bar-fill'); fill.style.width='0%'; bg.appendChild(fill); row.appendChild(bg);
+    const val=el('trait-val'); val.textContent=Math.round((vec[k]||0)*100)+'%'; row.appendChild(val);
+    ts.appendChild(row);
+    requestAnimationFrame(()=>setTimeout(()=>fill.style.width=Math.round((vec[k]||0)*100)+'%',140));
+  });
+  appRoot.appendChild(ts);
+
+  // ── EXPLANATION ──────────────────────────────────────────────
+  const es=el('explanation-section fade-up delay-3');
+  const etitle=el('section-title'); etitle.textContent=T.analisi; es.appendChild(etitle);
+  const ep=el('explanation-text'); ep.textContent=explanation; es.appendChild(ep);
+  appRoot.appendChild(es);
+
+  // ── FOOTER ───────────────────────────────────────────────────
+  const nav=el('footer-bar fade-up');
+  const shareBtn=mk('🔗 '+T.condividi,'primary');
+  shareBtn.onclick=()=>openShareModal(top);
+  nav.appendChild(shareBtn);
+  nav.appendChild(sp());
+  const restartBtn=mk('↺ '+T.ricomincia,'danger'); restartBtn.onclick=()=>resetQuiz(); nav.appendChild(restartBtn);
+  appRoot.appendChild(nav);
+}
+
+// Emoji fallback
+function charEmoji(id){ return {legoshi:'🐺',haru:'🐰',louis:'🦌',gohin:'🐼',bill:'🐯',juno:'🐺',jack:'🐕',riz:'🐻',pina:'🐑',melon:'🐆'}[id]||'🐾'; }
+
+// ── Share modal ────────────────────────────────────────────
+function buildShareUrl(charId){
+  try{
+    const u = new URL(location.href);
+    // Clean quiz state params — share only the character result
+    u.searchParams.delete('seed');
+    u.searchParams.delete('answers');
+    u.searchParams.set('shared', charId);
+    return u.toString();
+  }catch(e){
+    return location.href + '?shared=' + charId;
+  }
+}
+
+function openShareModal(char){
+  const overlay  = document.getElementById('shareOverlay');
+  const img      = document.getElementById('shareModalImg');
+  const nameEl   = document.getElementById('shareModalName');
+  const specEl   = document.getElementById('shareModalSpecies');
+  const header   = document.getElementById('shareModalHeader');
+  const urlBox   = document.getElementById('shareUrlBox');
+  const copyBtn  = document.getElementById('shareCopyBtn');
+  const waBtn    = document.getElementById('shareWaBtn');
+  const closeBtn = document.getElementById('shareCloseBtn');
+
+  const shareUrl = buildShareUrl(char.id);
+
+  img.src = char.img;
+  img.onerror = ()=>{ img.style.display='none'; };
+  nameEl.textContent = char.name;
+  specEl.textContent = char.species + ' · ' + char.mbti;
+  header.style.setProperty('--sp-color', char.color);
+  urlBox.textContent = shareUrl;
+
+  // Copy to clipboard
+  copyBtn.onclick = ()=>{
+    navigator.clipboard.writeText(shareUrl).then(()=>{
+      copyBtn.textContent = '✅ Copiato!';
+      setTimeout(()=>{ copyBtn.textContent = '📋 Copia link'; }, 2000);
+    }).catch(()=>{
+      // Fallback: select text
+      const range = document.createRange();
+      range.selectNode(urlBox);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+    });
+  };
+
+  // WhatsApp share
+  waBtn.onclick = ()=>{
+    const text = `Ho scoperto di essere ${char.name} (${char.species}) nel quiz Beastars! 🐾 Scopri chi sei anche tu: ${shareUrl}`;
+    window.open('https://wa.me/?text='+encodeURIComponent(text), '_blank');
+  };
+
+  closeBtn.onclick = ()=>overlay.classList.remove('open');
+  overlay.onclick = e=>{ if(e.target===overlay) overlay.classList.remove('open'); };
+
+  overlay.classList.add('open');
+}
+
+
+// ── Helpers ────────────────────────────────────────────────
+function el(cls){ const e=document.createElement('div'); if(cls) e.className=cls; return e; }
+function mk(text, v='primary'){ const b=document.createElement('button'); b.className=`btn btn-${v}`; b.textContent=text; return b; }
+function sp(){ const s=document.createElement('span'); s.className='spacer'; return s; }
+function resetQuiz(){ resultCache=null; answers={}; index=0; seed=Math.floor(Math.random()*1e9); QUESTIONS=buildQuestions(seed,12); saveState(); render(); }
+
+// ── Keyboard + Info toggle + Download ─────────────────────
+document.addEventListener('keydown',e=>{ if(e.key.toLowerCase()==='r'&&!e.ctrlKey&&!e.metaKey) resetQuiz(); });
+
+// ── Gender toggle ─────────────────────────────────────────
+['gAll','gM','gF'].forEach(id=>{
+  const btn = document.getElementById(id);
+  if(!btn) return;
+  btn.onclick = ()=>{
+    playerGender = btn.dataset.gender;
+    document.querySelectorAll('.gender-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    // If result is showing, recalculate with new gender filter
+    if(resultCache){ finish(); }
+  };
+});
+
+// ── Init ───────────────────────────────────────────────────
+render();
+renderSharedBanner();
+</script>
+</body>
+</html>
