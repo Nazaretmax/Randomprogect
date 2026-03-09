@@ -608,6 +608,63 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
   :root{--sb:240px}
   #file-grid{grid-template-columns:repeat(auto-fill,minmax(168px,1fr))}
 }
+
+/* ══ UPLOAD PROGRESS ══ */
+#upload-ov{z-index:660}
+#upload-box{max-width:380px;width:100%;padding:24px}
+#upload-box h3{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:16px}
+.up-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bdr)}
+.up-item:last-child{border-bottom:none}
+.up-name{flex:1;font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.up-bar-wrap{width:80px;height:5px;background:var(--bdr);border-radius:3px;overflow:hidden;flex-shrink:0}
+.up-bar{height:100%;background:var(--acc);border-radius:3px;transition:width .3s;width:0}
+.up-bar.done{background:var(--green)}
+.up-bar.err{background:var(--red)}
+.up-ico{font-size:14px;flex-shrink:0;min-width:18px;text-align:center}
+#up-close-btn{display:none;margin-top:14px;width:100%}
+/* upload drop zone on grid */
+#file-grid.drag-over{outline:2px dashed var(--acc);outline-offset:4px;border-radius:var(--r);background:var(--abg)}
+
+/* ══ MOVE DIALOG ══ */
+#move-ov{z-index:670}
+#move-box{max-width:380px;width:100%;padding:22px}
+#move-box h3{font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.move-src{font-size:11px;color:var(--tx3);margin-bottom:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#move-tree{border:1px solid var(--bdr2);border-radius:7px;max-height:220px;overflow-y:auto;margin-bottom:14px;background:var(--surf2)}
+.mt-item{display:flex;align-items:center;gap:6px;padding:8px 12px;cursor:pointer;
+  font-size:12px;color:var(--tx2);border-bottom:1px solid var(--bdr);transition:all .12s;user-select:none}
+.mt-item:last-child{border-bottom:none}
+.mt-item:hover{background:var(--abg);color:var(--acc)}
+.mt-item.sel{background:#eef2ff;color:var(--acc);font-weight:600}
+.mt-item .mt-ico{min-width:16px;text-align:center}
+.mt-dest{font-size:11px;color:var(--tx2);margin-bottom:12px;padding:7px 10px;
+  background:var(--surf2);border-radius:6px;border:1px solid var(--bdr)}
+.mt-dest b{color:var(--acc)}
+
+/* ══ BACKGROUND CONTEXT MENU ══ */
+#bg-ctx{position:fixed;z-index:600;background:var(--surf);border:1px solid var(--bdr2);
+  border-radius:var(--r);padding:4px;min-width:175px;
+  box-shadow:var(--sh2);display:none;animation:cIn .1s ease}
+.bg-ci{padding:7px 11px;border-radius:5px;cursor:pointer;font-size:12px;
+  color:var(--tx2);display:flex;align-items:center;gap:8px;transition:all .1s}
+.bg-ci:hover{background:var(--abg);color:var(--acc)}
+.bg-ci.admin-only{display:none}
+.admin-mode .bg-ci.admin-only{display:flex}
+.bg-ctx-sep{height:1px;background:var(--bdr);margin:3px 0}
+.bg-ctx-sep.admin-only{display:none}
+.admin-mode .bg-ctx-sep.admin-only{display:block}
+.bg-ctx-path{padding:5px 11px;font-size:10px;color:var(--tx3)}
+
+/* ══ BACKGROUND BOTTOM SHEET ══ */
+#bg-bs-ov{display:none;position:fixed;inset:0;z-index:598;background:rgba(0,0,0,.2)}
+#bg-bsheet{position:fixed;bottom:0;left:0;right:0;z-index:599;background:var(--surf);
+  border-top:1px solid var(--bdr);border-radius:14px 14px 0 0;
+  padding-bottom:env(safe-area-inset-bottom);
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:none}
+#bg-bsheet.open{transform:translateY(0);display:block}
+#bg-bs-handle{width:32px;height:4px;background:var(--bdr2);border-radius:2px;margin:10px auto 4px}
+#bg-bs-lbl{padding:4px 18px 10px;font-size:11px;color:var(--tx3);border-bottom:1px solid var(--bdr)}
+
 </style>
 </head>
 <body>
@@ -831,6 +888,31 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
 </div>
 
 
+
+
+<!-- ═══ MOVE DIALOG ═══ -->
+<div id="move-ov" class="ov">
+  <div id="move-box" class="ov-box">
+    <h3>↔ Sposta</h3>
+    <div class="move-src" id="move-src-name"></div>
+    <div id="move-tree"></div>
+    <div class="mt-dest">Destinazione: <b id="move-dest-lbl">/</b></div>
+    <div class="dlg-row">
+      <button id="move-cancel" class="btn btn-ghost">Annulla</button>
+      <button id="move-confirm" class="btn btn-prim">↔ Sposta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ UPLOAD PROGRESS ═══ -->
+<div id="upload-ov" class="ov">
+  <div id="upload-box" class="ov-box">
+    <h3>⬆ Caricamento file</h3>
+    <div id="upload-list"></div>
+    <button id="up-close-btn" class="btn btn-ghost" style="display:none">Chiudi</button>
+  </div>
+</div>
+
 <!-- ═══ SHARE MODAL ═══ -->
 <div id="share-ov" class="ov">
   <div id="share-box" class="ov-box">
@@ -862,15 +944,35 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
   </div>
 </div>
 
+
+<!-- ═══ BACKGROUND CONTEXT MENU ═══ -->
+<div id="bg-ctx">
+  <div class="bg-ci" id="bgctx-upload">⬆ Carica file</div>
+  <div class="bg-ctx-sep admin-only"></div>
+  <div class="bg-ci admin-only" id="bgctx-newfile">＋ Nuovo file</div>
+  <div class="bg-ci admin-only" id="bgctx-newfolder">📁 Nuova cartella</div>
+  <div class="bg-ctx-sep"></div>
+  <div class="bg-ctx-path" id="bgctx-path"></div>
+</div>
+
+<!-- ═══ BACKGROUND BOTTOM SHEET ═══ -->
+<div id="bg-bs-ov"></div>
+<div id="bg-bsheet">
+  <div id="bg-bs-handle"></div>
+  <div id="bg-bs-lbl">In questa cartella</div>
+  <div class="bsi" id="bgbs-upload"><span class="bi">⬆</span>Carica file</div>
+  <div class="bsi admin-only" id="bgbs-newfile"><span class="bi">＋</span>Nuovo file</div>
+  <div class="bsi admin-only" id="bgbs-newfolder"><span class="bi">📁</span>Nuova cartella</div>
+</div>
+
 <!-- ═══ CONTEXT MENU ═══ -->
 <div id="ctx">
   <div class="ci" id="ctx-open">⊞ Apri</div>
-  <div class="ci" id="ctx-gh">↗ GitHub</div>
-  <div class="ci" id="ctx-raw">⬇ Download Raw</div>
+  <div class="ci" id="ctx-dl">⬇ Scarica</div>
   <div class="ci" id="ctx-share">🔗 Copia link</div>
   <div class="ctx-sep admin-only"></div>
   <div class="ci admin-only" id="ctx-edit">✎ Modifica</div>
-  <div class="ci admin-only" id="ctx-rename">✏ Rinomina</div>
+  <div class="ci admin-only" id="ctx-move">↔ Sposta</div>
   <div class="ci admin-only del" id="ctx-del">🗑 Elimina</div>
   <div class="ctx-sep"></div>
   <div class="ctx-path" id="ctx-path"></div>
@@ -882,15 +984,17 @@ body{background:var(--bg);color:var(--tx);font-family:var(--font);
   <div id="bs-handle"></div>
   <div id="bs-name"></div>
   <div class="bsi" id="bs-open"><span class="bi">⊞</span>Apri</div>
-  <div class="bsi" id="bs-gh">  <span class="bi">↗</span>Vedi su GitHub</div>
-  <div class="bsi" id="bs-raw"> <span class="bi">⬇</span>Download Raw</div>
+  <div class="bsi" id="bs-dl">  <span class="bi">⬇</span>Scarica</div>
   <div class="bsi" id="bs-share"><span class="bi">🔗</span>Condividi link</div>
   <div class="bsi admin-only" id="bs-edit"><span class="bi">✎</span>Modifica</div>
+  <div class="bsi admin-only" id="bs-move"><span class="bi">↔</span>Sposta</div>
   <div class="bsi del admin-only" id="bs-del"><span class="bi">🗑</span>Elimina</div>
 </div>
 
 <!-- TOAST -->
 <div id="toast-wrap"></div>
+<input type="file" id="upload-input" multiple style="display:none" accept="*/*">
+
 
 <script>
 'use strict';
@@ -1662,9 +1766,10 @@ function showCtx(e, item){
   m.style.left = x+'px'; m.style.top = y+'px';
   document.getElementById('ctx-path').textContent = item.path||item.name;
   const isFile = item.type!=='dir'&&!!item.path;
-  document.getElementById('ctx-raw').style.display  = isFile?'flex':'none';
-  document.getElementById('ctx-edit').style.display = isFile?'flex':'none';
-  document.getElementById('ctx-rename').style.display = isFile?'flex':'none';
+  document.getElementById('ctx-dl').style.display    = isFile?'flex':'none';
+  document.getElementById('ctx-share').style.display = isFile?'flex':'none';
+  document.getElementById('ctx-edit').style.display  = isFile?'flex':'none';
+  document.getElementById('ctx-move').style.display  = 'flex';
 }
 function hideCtx(){ document.getElementById('ctx').style.display='none'; }
 document.getElementById('ctx-open').addEventListener('click',  ()=>{ if(ctxTarget) handleClick(ctxTarget); hideCtx(); });
@@ -1680,7 +1785,8 @@ function showBS(item){
   ctxTarget = item;
   document.getElementById('bs-name').textContent = item.path||item.name;
   const isFile = item.type!=='dir'&&!!item.path;
-  document.getElementById('bs-raw').style.display  = isFile?'flex':'none';
+  document.getElementById('bs-dl').style.display    = isFile?'flex':'none';
+  document.getElementById('bs-share').style.display = isFile?'flex':'none';
   document.getElementById('bsheet').classList.add('open');
   document.getElementById('bs-ov').style.display='block';
 }
@@ -1697,7 +1803,7 @@ document.getElementById('bs-handle').addEventListener('click',hideBS);
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
   const key = e.key;
-  if(key==='Escape'){ closeViewer(); closeEditor(); closeFolderModal(); closeHtmlPicker(); closeShare(); document.getElementById('conf-ov').classList.remove('open'); }
+  if(key==='Escape'){ closeViewer(); closeEditor(); closeFolderModal(); closeHtmlPicker(); closeShare(); closeMove(); hideBgCtx(); hideBgBs(); document.getElementById('conf-ov').classList.remove('open'); }
   if(key==='/'||key.toLowerCase()==='f'){ e.preventDefault(); document.getElementById('search').focus(); }
   if(key==='Backspace'||key==='ArrowLeft') goUp();
   if(key.toLowerCase()==='g') setView('grid');
@@ -1792,7 +1898,326 @@ document.getElementById('m-share').addEventListener('click',   ()=>{ if(ctxTarge
 
 // Keep token secret: clear on page unload if admin never manually asked to save
 window.addEventListener('beforeunload', ()=>{
-  // token persists in localStorage — user can logout via admin badge
+  
+/* ══════════════════════════════════════════
+   BACKGROUND CONTEXT MENU (right-click on empty space)
+══════════════════════════════════════════ */
+let bgLpTimer = null;
+
+function showBgCtx(e){
+  const bgCtx = document.getElementById('bg-ctx');
+  bgCtx.style.display = 'block';
+  const fp = currentPath.length ? '/'+currentPath.join('/')+'/' : '/';
+  document.getElementById('bgctx-path').textContent = 'Cartella: '+fp;
+  const x = Math.min(e.clientX, window.innerWidth  - bgCtx.offsetWidth  - 8);
+  const y = Math.min(e.clientY, window.innerHeight - bgCtx.offsetHeight - 8);
+  bgCtx.style.left = x+'px'; bgCtx.style.top = y+'px';
+}
+function hideBgCtx(){ document.getElementById('bg-ctx').style.display='none'; }
+
+// Right-click on the grid background (not on a card)
+document.getElementById('file-grid').addEventListener('contextmenu', e=>{
+  if(e.target.closest('.fc')) return; // card has its own menu
+  e.preventDefault();
+  showBgCtx(e);
+});
+
+// Long-press on grid background (mobile)
+document.getElementById('file-grid').addEventListener('touchstart', e=>{
+  if(e.target.closest('.fc')) return;
+  bgLpTimer = setTimeout(()=>{ showBgBs(); }, 600);
+},{passive:true});
+document.getElementById('file-grid').addEventListener('touchend',  ()=>clearTimeout(bgLpTimer),{passive:true});
+document.getElementById('file-grid').addEventListener('touchmove', ()=>clearTimeout(bgLpTimer),{passive:true});
+
+// BG ctx items
+document.getElementById('bgctx-upload').addEventListener('click', ()=>{ hideBgCtx(); triggerUpload(); });
+document.getElementById('bgctx-newfile').addEventListener('click', ()=>{ hideBgCtx(); openEditor(null); });
+document.getElementById('bgctx-newfolder').addEventListener('click', ()=>{ hideBgCtx(); openFolderModal(); });
+document.addEventListener('click', e=>{ if(!document.getElementById('bg-ctx').contains(e.target)) hideBgCtx(); });
+
+/* ══ BACKGROUND BOTTOM SHEET ══ */
+function showBgBs(){
+  const fp = currentPath.length ? '/'+currentPath.join('/')+'/' : '/';
+  document.getElementById('bg-bs-lbl').textContent = 'Cartella: ' + fp;
+  document.getElementById('bg-bsheet').classList.add('open');
+  document.getElementById('bg-bs-ov').style.display = 'block';
+}
+function hideBgBs(){
+  document.getElementById('bg-bsheet').classList.remove('open');
+  document.getElementById('bg-bs-ov').style.display = 'none';
+}
+document.getElementById('bgbs-upload').addEventListener('click', ()=>{ hideBgBs(); triggerUpload(); });
+document.getElementById('bgbs-newfile').addEventListener('click', ()=>{ hideBgBs(); openEditor(null); });
+document.getElementById('bgbs-newfolder').addEventListener('click', ()=>{ hideBgBs(); openFolderModal(); });
+document.getElementById('bg-bs-ov').addEventListener('click', hideBgBs);
+document.getElementById('bg-bs-handle').addEventListener('click', hideBgBs);
+
+/* ══════════════════════════════════════════
+   DIRECT DOWNLOAD
+══════════════════════════════════════════ */
+async function downloadFile(item){
+  if(!item?.path){ toast('Nessun file selezionato','err'); return; }
+  toast('⬇ Scaricamento…');
+  try{
+    const r = await fetch(rawUrl(item.path), {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const blob = await r.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = item.name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    toast('✓ Scaricato: '+item.name,'ok');
+  }catch(e){
+    // fallback: open raw in new tab
+    window.open(rawUrl(item.path),'_blank');
+    toast('⬇ Aperto nel browser','info');
+  }
+}
+
+/* ══════════════════════════════════════════
+   UPLOAD FILES
+══════════════════════════════════════════ */
+function triggerUpload(){
+  document.getElementById('upload-input').click();
+}
+
+document.getElementById('upload-input').addEventListener('change', async e=>{
+  const files = Array.from(e.target.files||[]);
+  if(!files.length) return;
+  e.target.value = ''; // reset so same file can be re-uploaded
+  await startUpload(files);
+});
+
+// Drag-and-drop on grid
+const grid = document.getElementById('file-grid');
+grid.addEventListener('dragover',  e=>{ e.preventDefault(); grid.classList.add('drag-over'); });
+grid.addEventListener('dragleave', e=>{ grid.classList.remove('drag-over'); });
+grid.addEventListener('drop',      async e=>{
+  e.preventDefault();
+  grid.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files||[]);
+  if(files.length) await startUpload(files);
+});
+
+async function startUpload(files){
+  const ov   = document.getElementById('upload-ov');
+  const list = document.getElementById('upload-list');
+  const closeBtn = document.getElementById('up-close-btn');
+  list.innerHTML = '';
+  closeBtn.style.display = 'none';
+  ov.classList.add('open');
+
+  const pfx = currentPath.length ? currentPath.join('/')+'/' : '';
+  const rows = files.map(f=>{
+    const row = document.createElement('div');
+    row.className = 'up-item';
+    row.innerHTML = `<span class="up-ico">📄</span>
+      <span class="up-name">${esc(f.name)}</span>
+      <div class="up-bar-wrap"><div class="up-bar" id="upb-${esc(f.name).replace(/\W/g,'_')}"></div></div>`;
+    list.appendChild(row);
+    return {file:f, bar:row.querySelector('.up-bar')};
+  });
+
+  let ok=0, fail=0;
+  for(const {file, bar} of rows){
+    bar.style.width = '30%';
+    try{
+      const content = await readFileBase64(file);
+      bar.style.width = '70%';
+      const fullPath = pfx + file.name;
+      // Check if file already exists (to get sha for update)
+      let sha;
+      try{
+        const check = await fetch(`${API_CONTENTS}/${fullPath}`,{headers:apiH()});
+        if(check.ok){ const d=await check.json(); sha=d.sha; }
+      }catch(_){}
+
+      const body = {message:`Caricato ${file.name}`,content,branch:BRANCH};
+      if(sha) body.sha = sha;
+      const res = await fetch(`${API_CONTENTS}/${fullPath}`,{
+        method:'PUT', headers:apiH(), body:JSON.stringify(body)
+      });
+      if(!res.ok){ const d=await res.json(); throw new Error(d.message||res.status); }
+      bar.style.width = '100%';
+      bar.classList.add('done');
+      ok++;
+    }catch(err){
+      bar.style.width = '100%';
+      bar.classList.add('err');
+      fail++;
+      console.warn('Upload error:', file.name, err);
+    }
+  }
+
+  closeBtn.style.display = 'flex';
+  if(fail===0) toast(`✓ ${ok} file caricati`,'ok');
+  else toast(`⚠ ${ok} caricati, ${fail} errori`,'err');
+  await loadRepo();
+}
+
+function readFileBase64(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload  = ()=> res(r.result.split(',')[1]);
+    r.onerror = ()=> rej(new Error('Lettura fallita'));
+    r.readAsDataURL(file);
+  });
+}
+
+document.getElementById('up-close-btn').addEventListener('click',()=>{
+  document.getElementById('upload-ov').classList.remove('open');
+});
+document.getElementById('upload-ov').addEventListener('click',e=>{
+  if(e.target===document.getElementById('upload-ov')&&
+     document.getElementById('up-close-btn').style.display!=='none')
+    document.getElementById('upload-ov').classList.remove('open');
+});
+
+/* ══════════════════════════════════════════
+   MOVE FILE / FOLDER
+══════════════════════════════════════════ */
+let moveItem    = null;
+let moveDest    = '';  // destination path ('' = root)
+
+function openMove(item){
+  if(!isAdmin){ toast('⚠ Solo gli admin possono spostare file','err'); return; }
+  moveItem = item;
+  moveDest = '';
+  document.getElementById('move-src-name').textContent = item.path||item.name;
+  document.getElementById('move-dest-lbl').textContent = '/';
+  buildMoveTree();
+  document.getElementById('move-ov').classList.add('open');
+}
+function closeMove(){ document.getElementById('move-ov').classList.remove('open'); moveItem=null; }
+
+function buildMoveTree(){
+  const ct = document.getElementById('move-tree');
+  ct.innerHTML = '';
+  // Root item
+  const root = document.createElement('div');
+  root.className = 'mt-item' + (moveDest==='' ? ' sel' : '');
+  root.innerHTML = '<span class="mt-ico">⌂</span> / (root)';
+  root.addEventListener('click',()=>setMoveDest('',root));
+  ct.appendChild(root);
+
+  // All directories
+  const dirs = [];
+  function collectDirs(node, prefix){
+    Object.values(node.children||{}).filter(n=>n.type==='dir').forEach(n=>{
+      const p = prefix ? prefix+'/'+n.name : n.name;
+      dirs.push({name:p, depth: (p.match(/\//g)||[]).length});
+      collectDirs(n, p);
+    });
+  }
+  collectDirs(fileTree, '');
+  dirs.sort((a,b)=>a.name.localeCompare(b.name));
+  dirs.forEach(d=>{
+    // skip the item's own folder and its subfolders
+    const itemFolder = moveItem?.path?.includes('/') ? moveItem.path.split('/').slice(0,-1).join('/') : '';
+    if(moveItem?.type==='dir'){
+      const srcPath = moveItem.path||moveItem.name;
+      if(d.name===srcPath || d.name.startsWith(srcPath+'/')) return;
+    }
+    const el = document.createElement('div');
+    el.className = 'mt-item' + (moveDest===d.name ? ' sel' : '');
+    const indent = '  '.repeat(d.depth);
+    el.innerHTML = `<span class="mt-ico">📁</span>${indent}${d.name}`;
+    el.style.paddingLeft = (12 + d.depth*10)+'px';
+    el.addEventListener('click',()=>setMoveDest(d.name,el));
+    ct.appendChild(el);
+  });
+}
+
+function setMoveDest(path, el){
+  moveDest = path;
+  document.getElementById('move-dest-lbl').textContent = path ? '/'+path+'/' : '/';
+  document.querySelectorAll('.mt-item').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+document.getElementById('move-cancel').addEventListener('click', closeMove);
+document.getElementById('move-ov').addEventListener('click', e=>{
+  if(e.target===document.getElementById('move-ov')) closeMove();
+});
+
+document.getElementById('move-confirm').addEventListener('click', async ()=>{
+  if(!isAdmin||!moveItem) return;
+  const btn = document.getElementById('move-confirm');
+  btn.disabled=true; btn.textContent='Spostamento…';
+
+  try{
+    if(moveItem.type==='dir'){
+      await moveFolderContents(moveItem);
+    }else{
+      await moveFile(moveItem, moveDest);
+    }
+    closeMove();
+    await loadRepo();
+  }catch(e){
+    toast('❌ '+e.message,'err');
+  }finally{
+    btn.disabled=false; btn.textContent='↔ Sposta';
+  }
+});
+
+async function moveFile(item, destFolder){
+  // 1. fetch current content
+  const r = await fetch(`${API_CONTENTS}/${item.path}`,{headers:apiH()});
+  if(!r.ok) throw new Error('Lettura sorgente fallita');
+  const d    = await r.json();
+  const newName = item.name;
+  const newPath = destFolder ? `${destFolder}/${newName}` : newName;
+  if(newPath === item.path) throw new Error('La destinazione è uguale alla sorgente');
+
+  // 2. create at new path
+  const body = {message:`Spostato ${item.name} → /${newPath}`,content:d.content.replace(/
+/g,''),branch:BRANCH};
+  const r2 = await fetch(`${API_CONTENTS}/${newPath}`,{method:'PUT',headers:apiH(),body:JSON.stringify(body)});
+  if(!r2.ok){ const e=await r2.json(); throw new Error(e.message||r2.status); }
+
+  // 3. delete original
+  await fetch(`${API_CONTENTS}/${item.path}`,{
+    method:'DELETE',headers:apiH(),
+    body:JSON.stringify({message:`Rimosso ${item.path} (spostato)`,sha:item.sha,branch:BRANCH})
+  });
+  toast(`✓ Spostato → /${newPath}`,'ok');
+}
+
+async function moveFolderContents(folderItem){
+  const srcPrefix = (folderItem.path||folderItem.name)+'/';
+  const toMove    = allFiles.filter(f=>f.path.startsWith(srcPrefix));
+  if(!toMove.length){ toast('Cartella vuota','info'); return; }
+  let ok=0, fail=0;
+  for(const f of toMove){
+    const relPath = f.path.slice(srcPrefix.length);
+    const newPath = moveDest
+      ? `${moveDest}/${folderItem.name}/${relPath}`
+      : `${folderItem.name}/${relPath}`;
+    try{ await moveFile(f, newPath.split('/').slice(0,-1).join('/')); ok++; }
+    catch(_){ fail++; }
+  }
+  if(fail===0) toast(`✓ Cartella spostata (${ok} file)`,'ok');
+  else toast(`⚠ ${ok} OK, ${fail} errori`,'err');
+}
+
+/* ══════════════════════════════════════════
+   WIRE NEW ITEMS TO EXISTING MENUS
+══════════════════════════════════════════ */
+// Context menu — download + move
+document.getElementById('ctx-dl').addEventListener('click',   ()=>{ hideCtx(); if(ctxTarget) downloadFile(ctxTarget); });
+document.getElementById('ctx-move').addEventListener('click',  ()=>{ hideCtx(); if(ctxTarget) openMove(ctxTarget); });
+
+// Bottom sheet — download + move
+document.getElementById('bs-dl').addEventListener('click',   ()=>{ hideBS();  if(ctxTarget) downloadFile(ctxTarget); });
+document.getElementById('bs-move').addEventListener('click',  ()=>{ hideBS();  if(ctxTarget) openMove(ctxTarget); });
+
+// Escape closes new overlays
+
+// token persists in localStorage — user can logout via admin badge
 });
 </script>
 </body>
