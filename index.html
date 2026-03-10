@@ -87,10 +87,7 @@ button { cursor: pointer; }
 #admin-badge.on { display: flex; }
 #admin-badge:hover { color: var(--red); }
 .adot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-#vtog { display: flex; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; flex-shrink: 0; }
-.vb { background: none; border: none; color: var(--text-3); padding: 4px 8px; font-size: 13px; line-height: 1; transition: all .1s; }
-.vb.on { background: var(--text); color: #fff; }
-.vb:hover:not(.on) { color: var(--text); }
+
 
 /* ── LAYOUT ── */
 #app { display: flex; padding-top: var(--bar); min-height: 100vh; }
@@ -512,10 +509,7 @@ button { cursor: pointer; }
   <button id="admin-badge" class="btn" style="font-size:11px;padding:3px 9px;font-family:var(--mono);color:var(--text-3);border-color:var(--border)">
     <span class="adot"></span>admin
   </button>
-  <div id="vtog">
-    <button class="vb on" id="btn-grid">⊞</button>
-    <button class="vb" id="btn-list">≡</button>
-  </div>
+
 </header>
 
 <!-- SIDEBAR OVERLAY -->
@@ -787,7 +781,7 @@ const GH=`https://github.com/${OWNER}/${REPO}`;
 /* ═══ STATE ═══ */
 let isAdmin=false, token='';
 let fileTree={}, allFiles=[], curPath=[], activeFilter=null;
-let sortMode='name', viewMode=localStorage.getItem('vm')||'grid';
+let sortMode='name', viewMode='list';
 let ctxItem=null, moveItem=null, moveDest='', editItem=null, pickItem=null;
 let lpTimer=null, bgLpTimer=null;
 let dragCount=0;
@@ -866,7 +860,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
       if(r.ok){const d=await r.json();if(d.permissions?.push)setAdmin(true);}
     }catch(_){}
   }
-  setView(viewMode); // apply saved view before render
+  viewMode='list'; $('grid')&&$('grid').classList.add('list');
 await loadRepo();
   if(!isAdmin&&!sessionStorage.getItem('guest'))cls('login-ov','open');
 });
@@ -1071,16 +1065,7 @@ on('sort-btn','click',()=>{
   sortMode=SORT[(SORT.indexOf(sortMode)+1)%SORT.length];
   $('sort-btn').textContent=SLBL[sortMode];renderCurrent();
 });
-function setView(v){
-  viewMode=v;
-  localStorage.setItem('vm',v);
-  $('btn-grid').classList.toggle('on',v==='grid');
-  $('btn-list').classList.toggle('on',v==='list');
-  $('grid').classList.toggle('list',v==='list');
-  renderCurrent();
-}
-on('btn-grid','click',()=>setView('grid'));
-on('btn-list','click',()=>setView('list'));
+function setView(v){ viewMode='list'; $('grid').classList.add('list'); renderCurrent(); }
 
 /* ═══ VIEWER ═══ */
 function openViewer(item){
@@ -1485,8 +1470,6 @@ document.addEventListener('keydown',e=>{
   if(k==='Escape'){closeViewer();closeEditor();closeFolderModal();closePicker();closeShare();closeMove();ucls('conf-ov','open');hideBgCtx();hideBgBs();}
   if(k==='/'||k.toLowerCase()==='f'){e.preventDefault();$('search').focus();}
   if(k==='Backspace')goUp();
-  if(k.toLowerCase()==='g')setView('grid');
-  if(k.toLowerCase()==='l')setView('list');
   if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='n'&&isAdmin){e.preventDefault();openEditor(null);}
   if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='u'&&isAdmin){e.preventDefault();triggerUpload();}
 });
