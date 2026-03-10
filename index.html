@@ -420,6 +420,42 @@ button { cursor: pointer; }
 .bni.adm { display: none; }
 .admin-mode .bni.adm { display: flex; }
 
+
+/* ── SHARE MODE ── */
+#share-banner {
+  display: none; background: var(--text); color: #fff;
+  padding: 9px 16px; font-family: var(--mono); font-size: 12px;
+  align-items: center; gap: 10px; flex-shrink: 0;
+  position: sticky; top: var(--bar); z-index: 190; width: 100%;
+}
+#share-banner.on { display: flex; }
+.sb-ico { font-size: 16px; }
+.sb-txt { flex: 1; line-height: 1.4; }
+.sb-txt b { font-weight: 600; }
+.sb-txt span { opacity: .65; font-size: 11px; display: block; margin-top: 1px; }
+
+/* ── FOLDER SHARE MODAL ── */
+#fshare-ov { z-index: 650; }
+#fshare-box { max-width: 420px; }
+.fsh-body { padding: 16px; }
+.fsh-folder { font-family: var(--mono); font-size: 13px; font-weight: 600;
+  color: var(--text); margin-bottom: 4px; }
+.fsh-desc { font-size: 12.5px; color: var(--text-2); line-height: 1.6; margin-bottom: 16px; }
+.fsh-url-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.fsh-url { flex: 1; border: 1px solid var(--border); border-radius: var(--r);
+  padding: 7px 10px; font-family: var(--mono); font-size: 11px; color: var(--text-2);
+  background: var(--bg); outline: none; user-select: all; }
+.fsh-url:focus { border-color: var(--text); background: var(--surface); }
+.fsh-copy { width: 34px; height: 34px; border-radius: var(--r); border: 1px solid var(--border);
+  background: var(--surface); display: flex; align-items: center; justify-content: center;
+  font-size: 14px; cursor: pointer; flex-shrink: 0; transition: all .1s; }
+.fsh-copy:hover { border-color: var(--text); background: var(--text); color: #fff; }
+.fsh-copy.done { border-color: var(--green); background: var(--green); color: #fff; }
+.fsh-note { font-family: var(--mono); font-size: 11px; color: var(--text-3);
+  line-height: 1.6; background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 10px 12px; }
+.fsh-note b { color: var(--text-2); }
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -515,6 +551,10 @@ button { cursor: pointer; }
 <!-- SIDEBAR OVERLAY -->
 <div id="sb-ov"></div>
 
+<div id="share-banner">
+  <span class="sb-ico">🔗</span>
+  <div class="sb-txt"><b id="sb-folder">Cartella condivisa</b><span>Solo visualizzazione e download — navigazione limitata</span></div>
+</div>
 <div id="app">
   <!-- SIDEBAR -->
   <aside id="sidebar">
@@ -665,6 +705,25 @@ button { cursor: pointer; }
   </div>
 </div>
 
+<!-- FOLDER SHARE -->
+<div id="fshare-ov" class="ov">
+  <div id="fshare-box" class="obox">
+    <div class="mh"><div class="mh-t"><b>🔗 Condividi cartella</b></div><button class="ib cls" id="fshare-cls">✕</button></div>
+    <div class="fsh-body">
+      <div class="fsh-folder" id="fsh-name"></div>
+      <p class="fsh-desc">Chiunque apra questo link vedrà <b>solo i file in questa cartella</b> e potrà scaricarli. Nessun accesso ad altre cartelle o funzioni di modifica.</p>
+      <div class="fsh-url-row">
+        <input class="fsh-url" id="fsh-url" readonly>
+        <button class="fsh-copy" id="fsh-copy">📋</button>
+      </div>
+      <div class="fsh-note">
+        <b>Nota:</b> questa funzione limita la navigazione nell'interfaccia.<br>
+        Il repo è pubblico su GitHub — i file sono accessibili via raw URL indipendentemente.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM -->
 <div id="conf-ov" class="ov">
   <div class="obox" style="max-width:380px">
@@ -743,7 +802,8 @@ button { cursor: pointer; }
 <div id="ctx">
   <div class="ci" id="ctx-open">⊞ Apri</div>
   <div class="ci" id="ctx-dl">⬇ Scarica</div>
-  <div class="ci" id="ctx-share">⋯ Condividi</div>
+  <div class="ci" id="ctx-share">⋯ Condividi file</div>
+  <div class="ci" id="ctx-fshare">🔗 Condividi cartella</div>
   <div class="ctx-sep adm"></div>
   <div class="ci adm" id="ctx-edit">✎ Modifica</div>
   <div class="ci adm" id="ctx-move">↔ Sposta</div>
@@ -759,7 +819,8 @@ button { cursor: pointer; }
   <div class="bs-name" id="bs-name"></div>
   <div class="bsi" id="bs-open"><span class="bi">⊞</span>Apri</div>
   <div class="bsi" id="bs-dl"><span class="bi">⬇</span>Scarica</div>
-  <div class="bsi" id="bs-share"><span class="bi">⋯</span>Condividi</div>
+  <div class="bsi" id="bs-share"><span class="bi">⋯</span>Condividi file</div>
+  <div class="bsi" id="bs-fshare"><span class="bi">🔗</span>Condividi cartella</div>
   <div class="bsi adm" id="bs-edit"><span class="bi">✎</span>Modifica</div>
   <div class="bsi adm" id="bs-move"><span class="bi">↔</span>Sposta</div>
   <div class="bsi adm del" id="bs-del"><span class="bi">🗑</span>Elimina</div>
@@ -1002,7 +1063,10 @@ function mkCard(item,i){
   return d;
 }
 function handleClick(item){
-  if(item.type==='dir'){closeSb();navTo(item.name);}
+  if(item.type==='dir'){
+    if(SHARE_MODE){ toast('Navigazione limitata in questa condivisione'); return; }
+    closeSb();navTo(item.name);
+  }
   else if(item.type==='html')showPicker(item);
   else openViewer(item);
 }
@@ -1444,6 +1508,62 @@ function generateQR(url){
   img.onerror=()=>qr.style.display='none';
 }
 
+
+/* ═══════════════════════════════
+   SHARE MODE
+   URL param: ?share=FolderName
+   Locks navigation to that folder only.
+═══════════════════════════════ */
+const SHARE_PARAM = new URLSearchParams(location.search).get('share');
+const SHARE_MODE  = !!SHARE_PARAM;
+
+function initShareMode(){
+  if(!SHARE_MODE) return;
+  // Lock navigation
+  curPath = SHARE_PARAM.split('/').filter(Boolean);
+  // Show banner
+  $('sb-folder').textContent = '📁 ' + SHARE_PARAM;
+  cls('share-banner','on');
+  // Hide sidebar, topbar admin controls, bottom nav admin items
+  $('sidebar').style.display = 'none';
+  $('sb-ov').style.display   = 'none';
+  $('menu-btn').style.display = 'none';
+  $('tb-admin-ctrl').style.display = 'none';
+  $('btn-upload').style.display    = 'none';
+  $('admin-badge').style.display   = 'none';
+  // Lock breadcrumb so clicking ~ does nothing
+  // Override navigation functions
+  goRoot = ()=> toast('Navigazione disabilitata in modalità condivisa');
+  goUp   = ()=> toast('Navigazione disabilitata in modalità condivisa');
+  filterType = ()=>{};
+}
+
+/* open folder share modal (admin only) */
+function openFolderShare(item){
+  if(!isAdmin){ toast('Solo gli admin possono condividere cartelle','err'); return; }
+  const folder = item.path || item.name;
+  const url    = location.origin + location.pathname + '?share=' + encodeURIComponent(folder);
+  $('fsh-name').textContent = '📁 ' + folder;
+  $('fsh-url').value = url;
+  cls('fshare-ov','open');
+}
+function closeFolderShare(){ ucls('fshare-ov','open'); }
+on('fshare-cls','click', closeFolderShare);
+on('fshare-ov','click', e=>{ if(e.target===$('fshare-ov')) closeFolderShare(); });
+on('fsh-copy','click', ()=>{
+  const url = $('fsh-url').value;
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn = $('fsh-copy');
+    btn.textContent='✓'; btn.classList.add('done');
+    setTimeout(()=>{ btn.textContent='📋'; btn.classList.remove('done'); }, 2000);
+    toast('Link copiato!','ok');
+  }).catch(()=>{ $('fsh-url').select(); document.execCommand('copy'); toast('Link copiato!','ok'); });
+});
+
+/* wire context menu + bottom sheet */
+on('ctx-fshare','click', ()=>{ hideCtx(); if(ctxItem) openFolderShare(ctxItem); });
+on('bs-fshare','click',  ()=>{ hideBS();  if(ctxItem) openFolderShare(ctxItem); });
+
 /* ═══ BG MENUS ═══ */
 function showBgCtx(e){
   const m=$('bg-ctx'),fp=curPath.length?'/'+curPath.join('/')+'/':'/';
@@ -1480,10 +1600,12 @@ on('bg-bs-ov','click',hideBgBs);
 /* ═══ FILE CONTEXT MENU ═══ */
 function showCtx(e,item){
   ctxItem=item;const isFile=item.type!=='dir'&&!!item.path;
+  const isDir=item.type==='dir';
   $('ctx-path').textContent=item.path||item.name;
   $('ctx-dl').style.display=isFile?'flex':'none';
   $('ctx-share').style.display=isFile?'flex':'none';
   $('ctx-edit').style.display=isFile?'flex':'none';
+  $('ctx-fshare').style.display=isDir&&isAdmin?'flex':'none';
   $('ctx').style.display='block';
   const m=$('ctx');
   const x=Math.min(e.clientX,window.innerWidth-m.offsetWidth-8);
@@ -1502,10 +1624,12 @@ on('ctx-del','click',()=>{hideCtx();if(ctxItem)confirmDel(ctxItem);});
 /* ═══ FILE BOTTOM SHEET ═══ */
 function showBS(item){
   ctxItem=item;const isFile=item.type!=='dir'&&!!item.path;
+  const isDir=item.type==='dir';
   $('bs-name').textContent=item.path||item.name;
   $('bs-dl').style.display=isFile?'flex':'none';
   $('bs-share').style.display=isFile?'flex':'none';
   $('bs-edit').style.display=isFile?'flex':'none';
+  $('bs-fshare').style.display=isDir&&isAdmin?'flex':'none';
   cls('bsheet','open');$('bs-ov').style.display='block';
 }
 function hideBS(){ucls('bsheet','open');$('bs-ov').style.display='none';}
@@ -1522,7 +1646,7 @@ on('bs-handle','click',hideBS); // handled via .bs-handle class click
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
   const k=e.key;
-  if(k==='Escape'){closeViewer();closeEditor();closeFolderModal();closePicker();closeShare();closeMove();ucls('conf-ov','open');hideBgCtx();hideBgBs();}
+  if(k==='Escape'){closeViewer();closeEditor();closeFolderModal();closePicker();closeShare();closeMove();closeFolderShare();ucls('conf-ov','open');hideBgCtx();hideBgBs();}
   if(k==='/'||k.toLowerCase()==='f'){e.preventDefault();$('search').focus();}
   if(k==='Backspace')goUp();
   if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='n'&&isAdmin){e.preventDefault();openEditor(null);}
