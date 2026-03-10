@@ -160,7 +160,7 @@ button { cursor: pointer; }
 .stat-l { font-size: 10px; color: var(--text-3); letter-spacing: .05em; text-transform: uppercase; margin-top: 2px; }
 
 /* ── GRID ── */
-#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; min-height: calc(100vh - 260px); }
+#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; min-height: calc(100vh - 220px); }
 #grid.list { grid-template-columns: 1fr; gap: 1px; min-height: 0; background: var(--border); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
 
 /* ── CARD ── */
@@ -173,13 +173,13 @@ button { cursor: pointer; }
 .fc:hover { border-color: var(--text); }
 .fc:active { opacity: .7; }
 .fc-thumb {
-  height: 76px; background: var(--bg); border-bottom: 1px solid var(--border);
+  height: 84px; background: var(--bg); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
 }
 .fc-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.fc-icon { font-size: 22px; opacity: .35; font-family: var(--mono); font-weight: 500; }
+.fc-icon { font-size: 26px; opacity: .28; font-family: var(--mono); font-weight: 500; letter-spacing: -.02em; }
 .fc-info { padding: 7px 8px; }
-.fc-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.fc-name { font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
 .fc-meta { font-size: 10.5px; color: var(--text-3); font-family: var(--mono); display: flex; justify-content: space-between; }
 /* admin quick actions */
 .fc-acts { position: absolute; top: 5px; right: 5px; display: none; gap: 3px; }
@@ -440,8 +440,8 @@ button { cursor: pointer; }
   #sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 200; height: 100vh; padding-top: calc(var(--bar) + env(safe-area-inset-top)); transform: translateX(-100%); }
   #sidebar.open { transform: none; box-shadow: 4px 0 20px rgba(0,0,0,.1); }
   #content { padding: 12px 10px 72px; }
-  #grid { grid-template-columns: repeat(2, 1fr); gap: 7px; }
-  .fc-thumb { height: 66px; }
+  #grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .fc-thumb { height: 80px; }
   .stat { padding: 8px 10px; }
   .stat-n { font-size: 15px; }
   #botnav { display: block; }
@@ -787,7 +787,7 @@ const GH=`https://github.com/${OWNER}/${REPO}`;
 /* ═══ STATE ═══ */
 let isAdmin=false, token='';
 let fileTree={}, allFiles=[], curPath=[], activeFilter=null;
-let sortMode='name', viewMode='grid';
+let sortMode='name', viewMode=localStorage.getItem('vm')||'grid';
 let ctxItem=null, moveItem=null, moveDest='', editItem=null, pickItem=null;
 let lpTimer=null, bgLpTimer=null;
 let dragCount=0;
@@ -866,7 +866,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
       if(r.ok){const d=await r.json();if(d.permissions?.push)setAdmin(true);}
     }catch(_){}
   }
-  await loadRepo();
+  setView(viewMode); // apply saved view before render
+await loadRepo();
   if(!isAdmin&&!sessionStorage.getItem('guest'))cls('login-ov','open');
 });
 
@@ -1072,6 +1073,7 @@ on('sort-btn','click',()=>{
 });
 function setView(v){
   viewMode=v;
+  localStorage.setItem('vm',v);
   $('btn-grid').classList.toggle('on',v==='grid');
   $('btn-list').classList.toggle('on',v==='list');
   $('grid').classList.toggle('list',v==='list');
