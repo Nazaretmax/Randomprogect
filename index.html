@@ -1269,34 +1269,89 @@ document.addEventListener('drop',async e=>{
 
 async function startUpload(files){
   if(!isAdmin){toast('Accedi come admin per caricare','err');cls('login-ov','open');return;}
+  if(!token){toast('Token mancante — riloggati','err');cls('login-ov','open');return;}
   cls('upload-ov','open');
   const list=$('up-list');list.innerHTML='';
-  $('up-close').style.display='none';
+  const upClose=$('up-close');upClose.style.display='none';
   const pfx=curPath.length?curPath.join('/')+'/':'';
+
   const rows=files.map(f=>{
     const row=document.createElement('div');row.className='up-row';
     const sid='up'+Math.random().toString(36).slice(2);
-    row.innerHTML=`<span class="up-n">${esc(f.name)}</span><div class="up-bar-wrap"><div class="up-bar" id="${sid}"></div></div><span class="up-s" id="${sid}s">…</span>`;
-    list.appendChild(row);return{file:f,bar:sid,stat:sid+'s'};
+    row.innerHTML=`<span class="up-n" title="${esc(f.name)}">${esc(f.name)}</span><div class="up-bar-wrap"><div class="up-bar" id="${sid}"></div></div><span class="up-s" id="${sid}s">…</span>`;
+    list.appendChild(row);
+    return{file:f,bar:sid,stat:sid+'s'};
   });
+
   let ok=0,fail=0;
   for(const{file,bar,stat}of rows){
-    const bEl=$(bar),sEl=$(stat);bEl.style.width='20%';
+    const bEl=$(bar),sEl=$(stat);
+    bEl.style.width='15%';
     try{
-      const content=await readB64(file);bEl.style.width='65%';
-      const path=pfx+file.name;
-      let sha;try{const cr=await fetch(`${API_C}/${path}`,{headers:apiH(),mode:'cors'});if(cr.ok){const cd=await cr.json();sha=cd.sha;}}catch(_){}
-      const body={message:'Caricato '+file.name,content,branch:BRANCH};if(sha)body.sha=sha;
-      const r=await fetch(`${API_C}/${path}`,{method:'PUT',headers:apiH(),body:JSON.stringify(body)});
-      if(!r.ok){const e=await r.json();throw new Error(e.message||r.status);}
+      // 1. read as base64
+      const content=await readB64(file);
+      bEl.style.width='50%';
+
+      // 2. sanitise filename (spaces → underscores for safety)
+      const safeName=file.name.replace(/[\\]/g,'_');
+      const path=pfx+safeName;
+
+      // 3. check if file already exists → get sha for update
+      let sha=null;
+      try{
+        const h={'Accept':'application/vnd.github.v3+json'};
+        if(token)h['Authorization']='Bearer '+token;
+        const cr=await fetch(`${API_C}/${encodeURIComponent(path).replace(/%2F/g,'/')}`,
+          {headers:h,mode:'cors'});
+        if(cr.ok){const cd=await cr.json();sha=cd.sha||null;}
+      }catch(_){}
+
+      bEl.style.width='75%';
+
+      // 4. PUT to GitHub API
+      const body={message:(sha?'Aggiornato ':'Caricato ')+safeName,content,branch:BRANCH};
+      if(sha)body.sha=sha;
+      const h2={'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};
+      if(token)h2['Authorization']='Bearer '+token;
+      const r=await fetch(`${API_C}/${encodeURIComponent(path).replace(/%2F/g,'/')}`,
+        {method:'PUT',headers:h2,mode:'cors',body:JSON.stringify(body)});
+
+      if(!r.ok){
+        let msg=r.status+' '+r.statusText;
+        try{const re=await r.json();msg=re.message||msg;}catch(_){}
+        throw new Error(msg);
+      }
       bEl.style.width='100%';bEl.classList.add('ok');sEl.textContent='✓';ok++;
-    }catch(e){bEl.style.width='100%';bEl.classList.add('err');sEl.textContent='✗';fail++;console.warn(file.name,e);}
+    }catch(e){
+      bEl.style.width='100%';bEl.classList.add('err');
+      sEl.textContent='✗';sEl.title=e.message;
+      fail++;
+      // show error in row
+      const errSpan=document.createElement('span');
+      errSpan.style.cssText='font-size:10px;color:var(--red);font-family:var(--mono);display:block;padding-top:3px;';
+      errSpan.textContent=e.message;
+      $(bar).closest('.up-row')?.appendChild(errSpan);
+      console.error('Upload failed:',file.name,e.message);
+    }
   }
-  $('up-close').style.display='flex';
-  toast(fail===0?ok+' file caricati':ok+' ok, '+fail+' errori',fail===0?'ok':'err');
-  if(ok>0)await loadRepo();
+
+  upClose.style.display='flex';
+  if(fail===0)toast(ok+' file caricati ✓','ok');
+  else toast(ok+' caricati, '+fail+' errori','err');
+  if(ok>0)setTimeout(()=>loadRepo(),800); // small delay so GitHub index updates
 }
-function readB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Lettura fallita'));r.readAsDataURL(file);});}
+function readB64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>{
+      const parts=r.result.split(',');
+      if(parts.length<2)return rej(new Error('Errore lettura file'));
+      res(parts[1]);
+    };
+    r.onerror=()=>rej(new Error('Impossibile leggere il file'));
+    r.readAsDataURL(file);
+  });
+}
 on('up-close','click',()=>ucls('upload-ov','open'));
 on('upload-ov','click',e=>{if(e.target===$('upload-ov')&&$('up-close').style.display!=='none')ucls('upload-ov','open');});
 
