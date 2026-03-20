@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <title>Ninja Revers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{width:100%;height:100%;background:#050d1a;overflow:hidden;position:fixed;top:0;left:0;font-family:'Rajdhani',sans-serif;}
+    #root{width:100%;height:100%;}
+    .custom-scrollbar::-webkit-scrollbar{width:4px;}
+    .custom-scrollbar::-webkit-scrollbar-track{background:rgba(5,13,26,.5);border-radius:4px;}
+    .custom-scrollbar::-webkit-scrollbar-thumb{background:rgba(6,182,212,.3);border-radius:4px;}
+    #game-canvas{display:block;image-rendering:crisp-edges;}
+
+    @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+    @keyframes glowPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+    @keyframes scaleIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+    @keyframes gradePop{0%{transform:scale(.2) rotate(-15deg);opacity:0}60%{transform:scale(1.25) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:1}}
+    @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+    @keyframes toastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+    @keyframes comboPop{0%{transform:scale(1)}40%{transform:scale(1.4)}100%{transform:scale(1)}}
+    @keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes achIn{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes achOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-30px)}}
+    @keyframes progressFill{from{width:0%}to{width:var(--w)}}
+
+    .anim-float{animation:floatY 3s ease-in-out infinite;}
+    .anim-scale-in{animation:scaleIn .35s cubic-bezier(.34,1.56,.64,1);}
+    .anim-grade-pop{animation:gradePop .7s cubic-bezier(.34,1.56,.64,1);}
+    .anim-combo-pop{animation:comboPop .18s ease-out;}
+    .anim-slide-up{animation:slideUp .4s ease-out;}
+    .toast-in{animation:toastIn .35s cubic-bezier(.34,1.56,.64,1) forwards;}
+    .ach-in{animation:achIn .4s cubic-bezier(.34,1.56,.64,1) forwards;}
+    .ach-out{animation:achOut .35s ease-in forwards;}
+
+    .text-shimmer{
+      background:linear-gradient(90deg,#06b6d4,#34d399,#67e8f9,#34d399,#06b6d4);
+      background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      animation:shimmer 3s linear infinite;
+    }
+    .grade-S{text-shadow:0 0 20px #fbbf24,0 0 40px #f59e0b;}
+    .grade-A{text-shadow:0 0 20px #10b981,0 0 40px #059669;}
+    .grade-B{text-shadow:0 0 20px #3b82f6,0 0 40px #2563eb;}
+    .grade-C{text-shadow:0 0 20px #94a3b8;}
+    .grade-D{text-shadow:0 0 20px #ef4444;}
+    .glass{background:rgba(5,20,40,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+    .border-glow{box-shadow:0 0 0 1px rgba(6,182,212,.2),inset 0 0 30px rgba(6,182,212,.03);}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+
+// ── LocalStorage helpers ───────────────────────────────────────────────────
+const LS={
+  get(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch{return def;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}},
+};
+
+// ── Icons ──────────────────────────────────────────────────────────────────
+const Share2=({c=""})=><svg className={c} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>;
+const Trophy=({c=""})=><svg className={c} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>;
+const Bag=({c=""})=><svg className={c} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>;
+const CoinsIcon=({c=""})=><svg className={c} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>;
+const MusicIco=({c=""})=><svg className={c} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
+const MicIco=({c=""})=><svg className={c} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>;
+const CardIco=({c=""})=><svg className={c} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+const AchIco=({c=""})=><svg className={c} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+
+// ── Data ───────────────────────────────────────────────────────────────────
+const DEFAULT_PROFILE={name:'Ninja',highScore:0,coins:0,unlockedSkins:['default'],selectedSkin:'default',unlockedDeathPhrases:['default'],selectedDeathPhrase:'you are dead',unlockedMusic:['default'],selectedMusic:'default'};
+const SKINS=[{id:'default',name:'Ninja Rosso',price:0,color:'#e11d48'},{id:'cyan',name:'Ninja Ciano',price:50,color:'#06b6d4'},{id:'green',name:'Ninja Foresta',price:100,color:'#10b981'},{id:'gold',name:'Ninja Oro',price:500,color:'#eab308'},{id:'purple',name:'Ninja Ombra',price:1000,color:'#a855f7'},{id:'white',name:'Ninja Fantasma',price:800,color:'#e2e8f0'}];
+// texts[lang] = frase nella lingua giusta, langCode[lang] = BCP-47 per speechSynthesis
+const LANG_CODES={en:'en-US',it:'it-IT',fr:'fr-FR',es:'es-ES',de:'de-DE'};
+const DEATH_PHRASES=[
+  {id:'default', name:'Sei morto',  price:0,   texts:{en:'you are dead',  it:'sei morto',       fr:'tu es mort',   es:'estás muerto',  de:'du bist tot'}},
+  {id:'wasted',  name:'Eliminato',  price:200, texts:{en:'wasted',        it:'eliminato',        fr:'éliminé',      es:'eliminado',     de:'erledigt'}},
+  {id:'oof',     name:'Oof',        price:300, texts:{en:'oof',            it:'uffa',             fr:'aïe',          es:'uy',            de:'autsch'}},
+  {id:'try_again',name:'Riprova',   price:150, texts:{en:'try again',     it:'riprova ancora',   fr:'réessaie',     es:'inténtalo otra vez', de:'versuch es nochmal'}},
+  {id:'noob',    name:'Git Gud',    price:250, texts:{en:'get good, noob', it:'impara a giocare', fr:'fais des efforts', es:'aprende a jugar', de:'lern besser spielen'}},
+];
+const MUSIC_TRACKS=[{id:'default',name:'Classic 8-bit',price:0},{id:'synthwave',name:'Synthwave',price:400},{id:'rock',name:'Ninja Rock',price:600}];
+const COIN_BUNDLES=[{id:'starter',name:'Starter Pack',coins:1000,price:'€0.99'},{id:'pro',name:'Pro Pack',coins:5000,price:'€2.99'},{id:'master',name:'Master Pack',coins:15000,price:'€5.99'}];
+
+// ── Achievements: persisted progress, unlocked once ────────────────────────
+// Each achievement has: id, icon, title, desc, type (score|combo|dodge|coins|total_coins), target
+const ACHIEVEMENTS=[
+  {id:'first_blood',  icon:'🥷', title:'First Blood',    desc:'Schiva il primo ostacolo',         type:'score',       target:1},
+  {id:'score_15',     icon:'⚡', title:'Gaining Speed',  desc:'Raggiungi 15 punti',               type:'score',       target:15},
+  {id:'score_30',     icon:'🔥', title:'On Fire',        desc:'Raggiungi 30 punti',               type:'score',       target:30},
+  {id:'score_60',     icon:'⭐', title:'Ninja Master',   desc:'Raggiungi 60 punti',               type:'score',       target:60},
+  {id:'score_100',    icon:'👑', title:'LEGENDARY',      desc:'Raggiungi 100 punti',              type:'score',       target:100},
+  {id:'combo_5',      icon:'💥', title:'Combo x5!',      desc:'Combo di 5 consecutivi',           type:'combo',       target:5},
+  {id:'combo_10',     icon:'🌟', title:'Unstoppable',    desc:'Combo di 10 consecutivi',          type:'combo',       target:10},
+  {id:'combo_20',     icon:'🌊', title:'COMBO GOD',      desc:'Combo di 20 consecutivi',          type:'combo',       target:20},
+  {id:'dodge_50',     icon:'🎯', title:'Schivatore',     desc:'Schiva 50 ostacoli in una run',    type:'dodge',       target:50},
+  {id:'dodge_100',    icon:'🏃', title:'Intoccabile',    desc:'Schiva 100 ostacoli in una run',   type:'dodge',       target:100},
+  {id:'coins_50',     icon:'💰', title:'Avaro',          desc:'Raccogli 50 monete in una run',    type:'coins',       target:50},
+  {id:'total_500',    icon:'🏦', title:'Banca Ninja',    desc:'Accumula 500 monete in totale',    type:'total_coins', target:500},
+];
+
+const getGrade=(s)=>{
+  if(s>=100)return{l:'S',col:'#fbbf24',cls:'grade-S',label:'LEGGENDARIO'};
+  if(s>=60) return{l:'A',col:'#10b981',cls:'grade-A',label:'NINJA MASTER'};
+  if(s>=35) return{l:'B',col:'#3b82f6',cls:'grade-B',label:'APPRENDISTA'};
+  if(s>=15) return{l:'C',col:'#94a3b8',cls:'grade-C',label:'STUDENTE'};
+  return       {l:'D',col:'#ef4444',cls:'grade-D',label:'PRINCIPIANTE'};
+};
+const COMBO_TIERS=[
+  {min:0,  mul:1, col:'#ffffff',label:''},
+  {min:5,  mul:2, col:'#facc15',label:'x2'},
+  {min:10, mul:3, col:'#f97316',label:'x3'},
+  {min:20, mul:4, col:'#ef4444',label:'x4 GODLIKE'},
+];
+const getComboTier=(c)=>{let t=COMBO_TIERS[0];for(const ct of COMBO_TIERS)if(c>=ct.min)t=ct;return t;};
+
+// ── Translations ───────────────────────────────────────────────────────────
+const T={
+  en:{play:'PLAY',shop:'SHOP',leaderboard:'SCORES',score:'SCORE',bestScore:'Best',gameOver:'GAME OVER',retry:'RETRY',menu:'MENU',share:'SHARE',tutorialPrompt:'Welcome Ninja! Tap anywhere to jump between walls and dodge obstacles.',startTutorial:'Start Tutorial',skip:'Skip',shopTitle:'Ninja Shop',customize:'Customize your ninja!',skins:'Skins',audio:'Audio',coins:'Coins',buy:'Unlock',use:'Use',selected:'Active',bundles:'Coin Bundles',processing:'...',deathPhrases:'Death Phrases',music:'Music',dailyChallenge:'Daily Challenge',completed:'Done!',powerupInvincible:'INVINCIBLE!',powerupMultiplier:'2X SCORE!',powerupSlowMo:'SLOW MO!',powerupMagnet:'MAGNET!',stats:'STATS',maxCombo:'Best Combo',obstacles:'Dodged',newRecord:'NEW RECORD!',achievements:'Achievements'},
+  it:{play:'GIOCA',shop:'NEGOZIO',leaderboard:'PUNTEGGI',score:'PUNTEGGIO',bestScore:'Record',gameOver:'GAME OVER',retry:'RIGIOCA',menu:'MENU',share:'CONDIVIDI',tutorialPrompt:'Benvenuto Ninja! Tocca ovunque per saltare tra i muri e schivare gli ostacoli.',startTutorial:'Inizia Tutorial',skip:'Salta',shopTitle:'Negozio Ninja',customize:'Personalizza il tuo ninja!',skins:'Skin',audio:'Audio',coins:'Monete',buy:'Sblocca',use:'Usa',selected:'Attivo',bundles:'Pacchetti Monete',processing:'...',deathPhrases:'Frasi di Morte',music:'Musica',dailyChallenge:'Sfida Giornaliera',completed:'Fatto!',powerupInvincible:'INVINCIBILE!',powerupMultiplier:'PUNTEGGIO 2X!',powerupSlowMo:'RALLENTATORE!',powerupMagnet:'MAGNETE!',stats:'STATS',maxCombo:'Combo Max',obstacles:'Schivati',newRecord:'NUOVO RECORD!',achievements:'Obiettivi'},
+  fr:{play:'JOUER',shop:'BOUTIQUE',leaderboard:'SCORES',score:'SCORE',bestScore:'Record',gameOver:'FIN',retry:'REJOUER',menu:'MENU',share:'PARTAGER',tutorialPrompt:'Bienvenue Ninja! Touchez partout pour sauter.',startTutorial:'Tutoriel',skip:'Passer',shopTitle:'Boutique',customize:'Personnalisez!',skins:'Skins',audio:'Audio',coins:'Pièces',buy:'Débloquer',use:'Utiliser',selected:'Actif',bundles:'Packs',processing:'...',deathPhrases:'Phrases',music:'Musique',dailyChallenge:'Défi',completed:'Fait!',powerupInvincible:'INVINCIBLE!',powerupMultiplier:'2X!',powerupSlowMo:'RALENTI!',powerupMagnet:'AIMANT!',stats:'STATS',maxCombo:'Combo Max',obstacles:'Esquivés',newRecord:'RECORD!',achievements:'Succès'},
+  es:{play:'JUGAR',shop:'TIENDA',leaderboard:'PUNTOS',score:'PUNTOS',bestScore:'Récord',gameOver:'FIN',retry:'REINTENTAR',menu:'MENÚ',share:'COMPARTIR',tutorialPrompt:'¡Toca en cualquier lugar para saltar!',startTutorial:'Tutorial',skip:'Saltar',shopTitle:'Tienda',customize:'¡Personaliza!',skins:'Skins',audio:'Audio',coins:'Monedas',buy:'Desbloquear',use:'Usar',selected:'Activo',bundles:'Packs',processing:'...',deathPhrases:'Frases',music:'Música',dailyChallenge:'Reto',completed:'¡Hecho!',powerupInvincible:'¡INVENCIBLE!',powerupMultiplier:'¡2X!',powerupSlowMo:'¡LENTO!',powerupMagnet:'¡IMÁN!',stats:'STATS',maxCombo:'Combo Max',obstacles:'Esquivados',newRecord:'¡RÉCORD!',achievements:'Logros'},
+  de:{play:'SPIELEN',shop:'LADEN',leaderboard:'PUNKTE',score:'PUNKTE',bestScore:'Rekord',gameOver:'GAME OVER',retry:'NOCHMAL',menu:'MENÜ',share:'TEILEN',tutorialPrompt:'Tippe überall um zu springen!',startTutorial:'Tutorial',skip:'Überspringen',shopTitle:'Shop',customize:'Anpassen!',skins:'Skins',audio:'Audio',coins:'Münzen',buy:'Freischalten',use:'Nutzen',selected:'Aktiv',bundles:'Pakete',processing:'...',deathPhrases:'Phrasen',music:'Musik',dailyChallenge:'Tagesaufgabe',completed:'Fertig!',powerupInvincible:'UNBESIEGBAR!',powerupMultiplier:'2X!',powerupSlowMo:'ZEITLUPE!',powerupMagnet:'MAGNET!',stats:'STATS',maxCombo:'Kombo',obstacles:'Ausgewichen',newRecord:'REKORD!',achievements:'Erfolge'},
+};
+
+// ── Voice preload (elimina ritardo al primo avvio) ─────────────────────────
+let _voicesLoaded=false;
+function preloadVoices(){
+  if(!('speechSynthesis' in window)||_voicesLoaded)return;
+  const voices=window.speechSynthesis.getVoices();
+  if(voices.length){_voicesLoaded=true;return;}
+  window.speechSynthesis.addEventListener('voiceschanged',()=>{window.speechSynthesis.getVoices();_voicesLoaded=true;},{once:true});
+  // Trick: speak a silent utterance to wake up the engine
+  const u=new SpeechSynthesisUtterance('');u.volume=0;window.speechSynthesis.speak(u);
+}
+preloadVoices();
+
+// ── Audio ──────────────────────────────────────────────────────────────────
+class AudioCtrl{
+  constructor(){
+    this.ctx=null;this.musicInterval=null;this.isPlaying=false;this.noteIdx=0;
+    this.musicTrack='default';
+    this.deathPhrase='sei morto';   // testo da pronunciare
+    this.deathLang='it-IT';         // lingua BCP-47
+  }
+  init(){if(!this.ctx)this.ctx=new(window.AudioContext||window.webkitAudioContext)();if(this.ctx.state==='suspended')this.ctx.resume();}
+  tone(f,type,dur,vol=0.1,slide){if(!this.ctx)return;const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type;o.connect(g);g.connect(this.ctx.destination);o.frequency.setValueAtTime(f,this.ctx.currentTime);if(slide)o.frequency.exponentialRampToValueAtTime(slide,this.ctx.currentTime+dur);g.gain.setValueAtTime(vol,this.ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.01,this.ctx.currentTime+dur);o.start();o.stop(this.ctx.currentTime+dur);}
+  playJump(){this.init();this.tone(150,'square',.2,.05,600);}
+  playScore(combo){this.init();const b=800+Math.min(combo,10)*40;this.tone(b,'sine',.08,.04,b*1.5);}
+  playComboTier(tier){this.init();for(let i=0;i<tier;i++)setTimeout(()=>this.tone(600+i*200,'square',.1,.06,1000+i*200),i*80);}
+  playGameOver(){this.init();this.tone(300,'sawtooth',.5,.1,50);}
+  playVoiceOver(){
+    if(!('speechSynthesis' in window))return;
+    // Annulla qualsiasi cosa in corso e parla subito
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(this.deathPhrase);
+    u.lang=this.deathLang;
+    u.pitch=0.25;
+    u.rate=0.78;
+    u.volume=1;
+    // Prova a scegliere una voce nativa della lingua
+    const voices=window.speechSynthesis.getVoices();
+    const native=voices.find(v=>v.lang.startsWith(this.deathLang.split('-')[0])&&!v.name.includes('Google'));
+    const fallback=voices.find(v=>v.lang.startsWith(this.deathLang.split('-')[0]));
+    if(native||fallback)u.voice=native||fallback;
+    window.speechSynthesis.speak(u);
+  }
+  startMusic(getSpeed){
+    this.init();if(this.isPlaying)return;this.isPlaying=true;
+    let notes=[220,220,330,220,261.63,220,196,220],type='square';
+    if(this.musicTrack==='synthwave'){notes=[110,110,164.81,110,130.81,110,98,110];type='sawtooth';}
+    else if(this.musicTrack==='rock'){notes=[164.81,196,220,164.81,261.63,220,196,164.81];type='triangle';}
+    const next=()=>{if(!this.isPlaying||!this.ctx)return;this.tone(notes[this.noteIdx%notes.length]/2,type,.1,.02);this.noteIdx++;this.musicInterval=setTimeout(next,Math.max(80,250-(getSpeed()*10)));};
+    next();
+  }
+  stopMusic(){this.isPlaying=false;if(this.musicInterval)clearTimeout(this.musicInterval);}
+}
+
+// ── GameEngine ─────────────────────────────────────────────────────────────
+class GameEngine{
+  constructor(canvas){
+    this.canvas=canvas;this.ctx=canvas.getContext('2d');
+    this.audio=new AudioCtrl();
+    this.running=false;this.isDead=false;this.isTutorial=false;this.rafId=0;
+    this.ninja={x:100,y:360,lane:'BOTTOM',isJumping:false,targetLane:'BOTTOM',color:'#e11d48'};
+    this.trail=[];this.obstacles=[];this.powerups=[];this.particles=[];this.scorePopups=[];
+    this.speed=7;this.maxSpeed=20;this.speedInc=0.15;
+    this.score=0;this.sessionCoins=0;this.dodgedObstacles=0;
+    this.combo=0;this.maxCombo=0;this.prevTierIdx=0;
+    this.spawnTimer=100;this.powerupTimer=200;
+    this.tutorialSpawned=false;this.tutorialSuccess=false;this.tutorialSuccessTimer=0;
+    this.activePowerUp=null;
+    this.shakeTime=0;this.shakeIntensity=0;this.flashTime=0;this.flashColor='rgba(239,68,68,';
+    this.bgPhase=0;this.cityOffset=0;this.windowFlickerTimer=0;
+    this.initBg();this.draw();
+  }
+  initBg(){
+    this.stars=[];
+    for(let i=0;i<60;i++)this.stars.push({x:Math.random()*800,y:50+Math.random()*300,spd:.3,sz:.8,a:.4+Math.random()*.3});
+    for(let i=0;i<30;i++)this.stars.push({x:Math.random()*800,y:50+Math.random()*300,spd:.7,sz:1.3,a:.5+Math.random()*.3});
+    for(let i=0;i<12;i++)this.stars.push({x:Math.random()*800,y:50+Math.random()*300,spd:1.5,sz:2,a:.7+Math.random()*.3});
+    this.bldBot=[];this.bldTop=[];
+    let x=0;
+    while(x<800){const w=Math.max(15,20+Math.floor(Math.random()*60)),h=12+Math.floor(Math.random()*36);
+      const wins=[];for(let wy=4;wy<h-4;wy+=7)for(let wx=3;wx<w-3;wx+=7)if(Math.random()>.35)wins.push({lx:wx,ly:wy,on:Math.random()>.4});
+      this.bldBot.push({x,w,h,wins});x+=w;}
+    if(this.bldBot.length){const l=this.bldBot[this.bldBot.length-1];l.w=800-l.x;}
+    x=0;
+    while(x<800){const w=Math.max(15,20+Math.floor(Math.random()*55)),h=10+Math.floor(Math.random()*28);this.bldTop.push({x,w,h});x+=w;}
+    if(this.bldTop.length){const l=this.bldTop[this.bldTop.length-1];l.w=800-l.x;}
+  }
+  setCallbacks(onScore,onGameOver,onTutorialComplete,onCoinCollected,onPowerUp,onPowerUpExpired,onCombo){
+    this.onScore=onScore;this.onGameOver=onGameOver;this.onTutorialComplete=onTutorialComplete;
+    this.onCoinCollected=onCoinCollected;this.onPowerUp=onPowerUp;this.onPowerUpExpired=onPowerUpExpired;this.onCombo=onCombo;
+  }
+  setNinjaColor(c){this.ninja.color=c;}
+  setAudioConfig(musicTrack, deathPhraseId, lang){
+    this.audio.musicTrack=musicTrack;
+    const langKey=lang||'en';
+    const phrase=DEATH_PHRASES.find(p=>p.id===deathPhraseId)||DEATH_PHRASES[0];
+    this.audio.deathPhrase=phrase.texts[langKey]||phrase.texts['en'];
+    this.audio.deathLang=LANG_CODES[langKey]||'en-US';
+  }
+  start(isTutorial=false){
+    this.isTutorial=isTutorial;
+    this.ninja={...this.ninja,x:100,y:360,lane:'BOTTOM',isJumping:false,targetLane:'BOTTOM'};
+    this.trail=[];this.obstacles=[];this.powerups=[];this.particles=[];this.scorePopups=[];this.activePowerUp=null;
+    this.speed=7;this.score=0;this.sessionCoins=0;this.dodgedObstacles=0;
+    this.combo=0;this.maxCombo=0;this.prevTierIdx=0;
+    this.spawnTimer=100;this.powerupTimer=300;
+    this.tutorialSpawned=false;this.tutorialSuccess=false;
+    this.shakeTime=0;this.flashTime=0;
+    this.running=true;this.isDead=false;
+    this.audio.startMusic(()=>this.speed);
+    if(this.rafId)cancelAnimationFrame(this.rafId);
+    this.loop();
+  }
+  stop(){this.running=false;this.audio.stopMusic();if(this.rafId)cancelAnimationFrame(this.rafId);}
+  tap(){
+    this.audio.init();
+    if(!this.ninja.isJumping&&!this.tutorialSuccess){
+      this.ninja.isJumping=true;
+      this.ninja.targetLane=this.ninja.lane==='BOTTOM'?'TOP':'BOTTOM';
+      this.burst(this.ninja.x+20,this.ninja.y+20,this.ninja.color,10,this.ninja.targetLane==='TOP'?-1:1);
+      this.audio.playJump();
+    }
+  }
+  burst(x,y,col,n,dirY=0,spread=12,life=1,decay=.05){
+    for(let i=0;i<n;i++)this.particles.push({x,y,vx:(Math.random()-.5)*spread,vy:dirY?dirY*(Math.random()*5+4):(Math.random()-.5)*spread,life,decay,col,size:2+Math.random()*3});
+  }
+  spawnPopup(x,y,text,color='#10b981'){this.scorePopups.push({x,y,text,color,life:1.0,vy:-2.5});}
+  update(){
+    if(!this.running)return;
+    this.bgPhase+=.005;
+    if(this.tutorialSuccess){this.tutorialSuccessTimer--;if(this.tutorialSuccessTimer<=0){this.running=false;this.audio.stopMusic();this.onTutorialComplete();return;}}
+    if(!this.isDead){this.trail.push({x:this.ninja.x,y:this.ninja.y});if(this.trail.length>12)this.trail.shift();}
+    if(!this.isDead&&this.ninja.isJumping){
+      const js=25;
+      if(this.ninja.targetLane==='TOP'){this.ninja.y-=js;if(this.ninja.y<=50){this.ninja.y=50;this.ninja.isJumping=false;this.ninja.lane='TOP';}}
+      else{this.ninja.y+=js;if(this.ninja.y>=360){this.ninja.y=360;this.ninja.isJumping=false;this.ninja.lane='BOTTOM';}}
+    }
+    for(let i=this.particles.length-1;i>=0;i--){let p=this.particles[i];p.x+=p.vx-(this.isDead?0:this.speed*.3);p.y+=p.vy;p.life-=p.decay||.05;if(p.life<=0)this.particles.splice(i,1);}
+    for(let i=this.scorePopups.length-1;i>=0;i--){let p=this.scorePopups[i];p.y+=p.vy;p.life-=.025;if(p.life<=0)this.scorePopups.splice(i,1);}
+    if(this.isDead)return;
+    if(!this.tutorialSuccess){
+      let spd=this.speed;
+      if(this.activePowerUp){
+        this.activePowerUp.timeLeft-=16;
+        if(this.activePowerUp.timeLeft<=0){this.activePowerUp=null;this.onPowerUpExpired();}
+        else if(this.activePowerUp.type==='SLOW_MO')spd*=.5;
+      }
+      if(this.activePowerUp?.type==='MAGNET'){
+        for(const p of this.powerups){
+          if(p.isCoin){const dx=(this.ninja.x+20)-(p.x+p.width/2),dy=(this.ninja.y+20)-(p.y+p.height/2);const d=Math.sqrt(dx*dx+dy*dy);if(d<260&&d>1){p.x+=dx/d*7;p.y+=dy/d*7;}}
+        }
+      }
+      this.windowFlickerTimer++;
+      if(this.windowFlickerTimer>90){this.windowFlickerTimer=0;for(const b of this.bldBot)for(const w of b.wins||[])if(Math.random()>.97)w.on=!w.on;}
+      this.spawnTimer--;
+      if(this.spawnTimer<=0){
+        if(this.isTutorial){if(!this.tutorialSpawned){this.spawnObs();this.tutorialSpawned=true;}}
+        else{this.spawnObs();const mx=Math.max(30,90-this.score*1.5),mn=Math.max(15,40-this.score*.5);this.spawnTimer=Math.random()*(mx-mn)+mn;}
+      }
+      if(!this.isTutorial){this.powerupTimer--;if(this.powerupTimer<=0){this.spawnPU();this.powerupTimer=Math.random()*400+300;}}
+      for(let i=this.powerups.length-1;i>=0;i--){
+        let p=this.powerups[i];p.x-=spd;p.time+=.1;
+        if(this.checkCol(this.ninja,p)){
+          if(p.isCoin){this.burst(p.x+10,p.y+10,'#eab308',15);this.sessionCoins++;this.onCoinCollected();this.audio.tone(1200,'sine',.1,.04,1600);}
+          else{this.burst(p.x+12,p.y+12,p.color,30);this.activePowerUp={type:p.type,timeLeft:8000};this.onPowerUp(p.type);this.audio.tone(800,'square',.2,.1,1000);}
+          this.powerups.splice(i,1);continue;
+        }
+        if(p.x+p.width<0)this.powerups.splice(i,1);
+      }
+      for(let i=this.obstacles.length-1;i>=0;i--){
+        let o=this.obstacles[i];o.x-=spd;
+        if(o.vx)o.x+=o.vx;if(o.vy){o.y+=o.vy;if(o.y<50||o.y+o.height>400)o.vy*=-1;}
+        o.time+=.1;
+        if(this.checkCol(this.ninja,o)){
+          if(this.activePowerUp?.type==='INVINCIBILITY'){this.burst(o.x+20,o.y+20,'#fbbf24',25);this.obstacles.splice(i,1);this.audio.tone(300,'sawtooth',.1,.1,100);continue;}
+          this.burst(this.ninja.x+20,this.ninja.y+20,'#ef4444',50,0,30,1.5,.015);
+          this.burst(this.ninja.x+20,this.ninja.y+20,'#f97316',35,0,22,1.2,.018);
+          this.burst(this.ninja.x+20,this.ninja.y+20,'#facc15',20,0,15,1.0,.025);
+          this.shakeTime=20;this.shakeIntensity=8;this.flashTime=15;this.flashColor='rgba(239,68,68,';
+          this.isDead=true;this.audio.stopMusic();this.audio.playGameOver();this.audio.playVoiceOver();
+          this.onGameOver(this.score,this.sessionCoins,this.dodgedObstacles,this.maxCombo);return;
+        }
+        if(!o.passed&&o.x+o.width<this.ninja.x){
+          o.passed=true;this.dodgedObstacles++;
+          this.combo++;this.maxCombo=Math.max(this.maxCombo,this.combo);
+          const tier=getComboTier(this.combo);
+          const sg=this.activePowerUp?.type==='MULTIPLIER'?2:tier.mul;
+          this.score+=sg;this.onScore(this.score);
+          this.speed=Math.min(this.speed+this.speedInc,this.maxSpeed);
+          this.audio.playScore(this.combo);
+          this.burst(o.x+20,o.y+20,'#64748b',6);
+          this.spawnPopup(this.ninja.x+60,this.ninja.y,sg>1?`+${sg}${tier.mul>1?' '+tier.label:''}`:'+1',tier.col);
+          const newTierIdx=COMBO_TIERS.findIndex(ct=>ct===tier);
+          if(newTierIdx>this.prevTierIdx){this.flashTime=10;this.audio.playComboTier(newTierIdx);this.prevTierIdx=newTierIdx;}
+          this.onCombo(this.combo,this.maxCombo);
+          if(this.isTutorial){this.tutorialSuccess=true;this.tutorialSuccessTimer=60;}
+        }
+        if(o.x+o.width<0)this.obstacles.splice(i,1);
+      }
+    }
+  }
+  checkCol(n,o){const p=8,nx=n.x+p,ny=n.y+p,nw=40-p*2,nh=40-p*2,ox=o.x+p,oy=o.y+p,ow=o.width-p*2,oh=o.height-p*2;return nx<ox+ow&&nx+nw>ox&&ny<oy+oh&&ny+nh>oy;}
+  spawnObs(){
+    const types=['SPIKES','FIRE','TRAP','SHURIKEN','MOVING_BLOCK','BOMB'],type=types[Math.floor(Math.random()*types.length)];
+    const lane=Math.random()>.5?'TOP':'BOTTOM';let y=lane==='TOP'?50:360,w=40,h=40,vx=0,vy=0;
+    if(type==='SHURIKEN'||type==='BOMB'){y=100+Math.random()*200;vx=-2;w=32;h=32;}
+    else if(type==='MOVING_BLOCK'){y=200;vy=Math.random()>.5?2.5:-2.5;}
+    this.obstacles.push({x:800,y,width:w,height:h,type,lane,passed:false,vx,vy,time:0});
+  }
+  spawnPU(){
+    const lane=Math.random()>.5?'TOP':'BOTTOM',y=lane==='TOP'?62:372;
+    if(Math.random()>.3){this.powerups.push({x:800,y,width:20,height:20,time:0,isCoin:true});}
+    else{const types=['INVINCIBILITY','MULTIPLIER','SLOW_MO','MAGNET'],type=types[Math.floor(Math.random()*types.length)];const color=type==='INVINCIBILITY'?'#fbbf24':type==='MULTIPLIER'?'#c084fc':type==='SLOW_MO'?'#22d3ee':'#06b6d4';this.powerups.push({x:800,y,width:24,height:24,time:0,isCoin:false,type,color});}
+  }
+  draw(){
+    const ctx=this.ctx,W=800,H=450;
+    ctx.clearRect(0,0,W,H);
+    ctx.save();
+    if(this.shakeTime>0){this.shakeTime--;const s=this.shakeTime*this.shakeIntensity*.1;ctx.translate((Math.random()-.5)*s*this.shakeIntensity,(Math.random()-.5)*s*this.shakeIntensity);}
+    // Sky
+    const hue=220+Math.min(this.score*.4,60);
+    const gr=ctx.createLinearGradient(0,0,0,H);gr.addColorStop(0,`hsl(${hue},35%,6%)`);gr.addColorStop(1,`hsl(${hue+15},25%,3%)`);
+    ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+    // Stars
+    for(const s of this.stars){if(this.running)s.x-=s.spd;if(s.x<0)s.x=W;ctx.fillStyle=`rgba(200,220,255,${s.a})`;ctx.beginPath();ctx.arc(s.x,s.y,s.sz,0,Math.PI*2);ctx.fill();}
+    // City
+    if(this.running)this.cityOffset=(this.cityOffset+this.speed*.35)%800;
+    const off=this.cityOffset;
+    for(const b of this.bldBot){for(let dx=-800;dx<=800;dx+=800){const bx=b.x-off+dx;if(bx>W+5||bx+b.w<-5)continue;ctx.fillStyle='#0b1a2e';ctx.fillRect(bx,H-b.h,b.w,b.h);for(const wn of b.wins||[])if(wn.on){ctx.fillStyle='rgba(100,180,255,.35)';ctx.fillRect(bx+wn.lx,H-b.h+wn.ly,3,4);}}}
+    for(const b of this.bldTop){for(let dx=-800;dx<=800;dx+=800){const bx=b.x-(off*.75)+dx;if(bx>W+5||bx+b.w<-5)continue;ctx.fillStyle='#091525';ctx.fillRect(bx,0,b.w,b.h);}}
+    // Grid
+    ctx.strokeStyle='rgba(6,182,212,.06)';ctx.lineWidth=1;
+    const gOff=(Date.now()/20*this.speed)%100;
+    for(let i=0;i<10;i++){ctx.beginPath();ctx.moveTo(i*100-gOff,50);ctx.lineTo(i*100-gOff,400);ctx.stroke();}
+    // Walls
+    const wg=ctx.createLinearGradient(0,0,W,0);wg.addColorStop(0,'#0d1f36');wg.addColorStop(.5,'#112240');wg.addColorStop(1,'#0d1f36');
+    ctx.fillStyle=wg;ctx.fillRect(0,0,W,52);ctx.fillRect(0,398,W,52);
+    ctx.fillStyle='rgba(6,182,212,.3)';ctx.fillRect(0,50,W,2);ctx.fillRect(0,398,W,2);
+    // Particles
+    for(const p of this.particles){ctx.globalAlpha=Math.max(0,Math.min(1,p.life));ctx.fillStyle=p.col;ctx.shadowBlur=8;ctx.shadowColor=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.size||3,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;ctx.shadowBlur=0;
+    // Score popups
+    ctx.font='bold 22px "Bebas Neue", sans-serif';ctx.textAlign='center';
+    for(const p of this.scorePopups){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color;ctx.shadowBlur=12;ctx.shadowColor=p.color;ctx.fillText(p.text,p.x,p.y);}
+    ctx.globalAlpha=1;ctx.shadowBlur=0;
+    // Powerups
+    for(const p of this.powerups){
+      ctx.save();ctx.translate(p.x+p.width/2,p.y+p.height/2);const sc=1+Math.sin(p.time*5)*.18;ctx.scale(sc,sc);
+      if(p.isCoin){ctx.fillStyle='#eab308';ctx.shadowBlur=15;ctx.shadowColor='#eab308';ctx.beginPath();ctx.arc(0,0,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fef08a';ctx.shadowBlur=0;ctx.beginPath();ctx.arc(-2,-2,4,0,Math.PI*2);ctx.fill();}
+      else{ctx.fillStyle=p.color;ctx.shadowBlur=22;ctx.shadowColor=p.color;ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';const icons={INVINCIBILITY:'★',MULTIPLIER:'2X',SLOW_MO:'⏱',MAGNET:'⊕'};ctx.fillText(icons[p.type]||'?',0,0);}
+      ctx.restore();
+    }
+    // Obstacles
+    for(const o of this.obstacles)this.drawObs(ctx,o);
+    // Ninja
+    if(!this.isDead){
+      const tier=getComboTier(this.combo);
+      this.trail.forEach((pos,i)=>{ctx.globalAlpha=(i/this.trail.length)*.45;ctx.fillStyle=tier.col;ctx.shadowBlur=this.combo>4?12:0;ctx.shadowColor=tier.col;const sc=.6+(i/this.trail.length)*.4;ctx.save();ctx.translate(pos.x+20,pos.y+20);ctx.scale(sc,sc);ctx.fillRect(-14,-14,28,28);ctx.restore();});
+      ctx.globalAlpha=1;ctx.shadowBlur=0;
+      if(this.combo>=5){const pulse=1+Math.sin(Date.now()*.008)*(.15+Math.min(this.combo*.005,.3));ctx.save();ctx.translate(this.ninja.x+20,this.ninja.y+20);ctx.scale(pulse,pulse);ctx.strokeStyle=tier.col;ctx.lineWidth=2;ctx.globalAlpha=.4;ctx.shadowBlur=15;ctx.shadowColor=tier.col;ctx.beginPath();ctx.arc(0,0,26,0,Math.PI*2);ctx.stroke();ctx.restore();ctx.globalAlpha=1;ctx.shadowBlur=0;}
+      if(this.activePowerUp){const pc={INVINCIBILITY:'#fbbf24',MULTIPLIER:'#c084fc',SLOW_MO:'#22d3ee',MAGNET:'#06b6d4'};ctx.shadowBlur=20;ctx.shadowColor=pc[this.activePowerUp.type]||'#fff';}
+      this.drawNinja(ctx,this.ninja.x,this.ninja.y,this.ninja.isJumping,this.ninja.lane);
+      ctx.shadowBlur=0;
+    }
+    if(this.tutorialSuccess){ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#10b981';ctx.shadowBlur=30;ctx.shadowColor='#10b981';ctx.font='900 52px "Bebas Neue",sans-serif';ctx.textAlign='center';ctx.fillText('OTTIMO! 🎉',W/2,H/2);ctx.shadowBlur=0;}
+    if(this.flashTime>0){ctx.fillStyle=this.flashColor+(this.flashTime*.03)+')';ctx.fillRect(0,0,W,H);this.flashTime--;}
+    ctx.restore();
+  }
+  drawNinja(ctx,x,y,isJumping,lane){
+    ctx.save();ctx.translate(x+20,y+20);
+    if(lane==='TOP'&&!isJumping)ctx.scale(1,-1);
+    if(isJumping){const r=(y-50)/(360-50)*Math.PI;ctx.rotate(this.ninja.targetLane==='TOP'?-r:r);}
+    else{ctx.translate(0,Math.sin(Date.now()/50)*3);}
+    ctx.fillStyle='#09090b';if(ctx.roundRect)ctx.roundRect(-16,-16,32,32,7);else ctx.fillRect(-16,-16,32,32);ctx.fill();
+    ctx.fillStyle=this.ninja.color;ctx.shadowBlur=8;ctx.shadowColor=this.ninja.color;ctx.fillRect(-16,-8,32,8);ctx.shadowBlur=0;
+    const tw=Math.sin(Date.now()/100)*5;ctx.fillStyle=this.ninja.color;ctx.globalAlpha=.7;ctx.beginPath();ctx.moveTo(-16,-4);ctx.quadraticCurveTo(-25,-4+tw,-30,-8+tw);ctx.lineTo(-30,-2+tw);ctx.quadraticCurveTo(-25,0+tw,-16,0);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle='white';ctx.fillRect(4,-6,8,4);ctx.fillStyle='#09090b';ctx.fillRect(8,-6,2,4);
+    ctx.restore();
+  }
+  drawObs(ctx,o){
+    ctx.save();ctx.translate(o.x,o.y);ctx.shadowBlur=12;ctx.shadowColor='#ef4444';
+    if(o.type==='SHURIKEN'){ctx.translate(o.width/2,o.height/2);ctx.rotate(o.time*3);ctx.fillStyle='#cbd5e1';ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(5,-5);ctx.lineTo(15,0);ctx.lineTo(5,5);ctx.lineTo(0,15);ctx.lineTo(-5,5);ctx.lineTo(-15,0);ctx.lineTo(-5,-5);ctx.fill();ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);ctx.fill();ctx.restore();return;}
+    if(o.type==='BOMB'){ctx.translate(o.width/2,o.height/2);const fl=Math.sin(o.time*8)>.3;ctx.fillStyle=fl?'#dc2626':'#1e293b';ctx.shadowColor=fl?'#ef4444':'#94a3b8';ctx.beginPath();ctx.arc(0,0,14,0,Math.PI*2);ctx.fill();ctx.fillStyle=fl?'#fca5a5':'#64748b';ctx.beginPath();ctx.arc(4,-10,3,0,Math.PI*2);ctx.fill();ctx.strokeStyle=fl?'#fca5a5':'#94a3b8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(4,-7);ctx.quadraticCurveTo(8,-2,4,2);ctx.stroke();ctx.restore();return;}
+    if(o.type==='MOVING_BLOCK'){ctx.fillStyle='#334155';ctx.fillRect(0,0,o.width,o.height);ctx.fillStyle='#475569';ctx.fillRect(4,4,o.width-8,o.height-8);ctx.strokeStyle='rgba(6,182,212,.3)';ctx.lineWidth=1;ctx.strokeRect(0,0,o.width,o.height);ctx.restore();return;}
+    if(o.lane==='TOP'){ctx.translate(0,40);ctx.scale(1,-1);}
+    if(o.type==='SPIKES'){const sy=Math.max(0,Math.sin(o.time)*8);ctx.translate(0,sy);ctx.fillStyle='#94a3b8';ctx.beginPath();ctx.moveTo(0,40);ctx.lineTo(10,10);ctx.lineTo(20,40);ctx.moveTo(20,40);ctx.lineTo(30,10);ctx.lineTo(40,40);ctx.fill();ctx.fillStyle='#cbd5e1';ctx.beginPath();ctx.moveTo(10,10);ctx.lineTo(15,40);ctx.lineTo(20,40);ctx.moveTo(30,10);ctx.lineTo(35,40);ctx.lineTo(40,40);ctx.fill();}
+    else if(o.type==='FIRE'){const fl=Math.random()*12,wv=Math.sin(o.time*5)*5;ctx.fillStyle='#ea580c';ctx.beginPath();ctx.moveTo(0,40);ctx.quadraticCurveTo(10+wv,10+fl,20,0);ctx.quadraticCurveTo(30-wv,10+fl,40,40);ctx.fill();ctx.fillStyle='#facc15';ctx.beginPath();ctx.moveTo(10,40);ctx.quadraticCurveTo(20+wv/2,18+fl/2,20,8);ctx.quadraticCurveTo(20-wv/2,18+fl/2,30,40);ctx.fill();}
+    else if(o.type==='TRAP'){const sn=Math.sin(o.time*2)>0;ctx.fillStyle='#334155';ctx.fillRect(0,30,40,10);ctx.fillStyle='#94a3b8';for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(i*10,30);ctx.lineTo(i*10+5,sn?24:10);ctx.lineTo(i*10+10,30);ctx.fill();}}
+    ctx.restore();
+  }
+  loop=()=>{this.update();this.draw();if(this.running)this.rafId=requestAnimationFrame(this.loop);}
+}
+
+// ── ErrorBoundary ──────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component{
+  constructor(p){super(p);this.state={err:null};}
+  static getDerivedStateFromError(e){return{err:e};}
+  render(){if(this.state.err)return<div className="flex items-center justify-center h-screen bg-slate-950 text-white p-8 text-center"><div><p className="text-red-500 text-xl mb-4">{this.state.err.message}</p><button onClick={()=>window.location.reload()} className="mt-4 bg-slate-800 px-6 py-2 rounded-lg">Reload</button></div></div>;return this.props.children;}
+}
+
+// ── AchievementPopup ───────────────────────────────────────────────────────
+function AchievementPopup({ach,onDone}){
+  const [out,setOut]=useState(false);
+  useEffect(()=>{
+    const t1=setTimeout(()=>setOut(true),2800);
+    const t2=setTimeout(onDone,3200);
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[]);
+  return(
+    <div className={`${out?'ach-out':'ach-in'} flex items-center gap-3 pointer-events-none`}
+         style={{background:'rgba(5,20,40,.92)',border:'1px solid rgba(6,182,212,.3)',borderLeft:'3px solid #06b6d4',backdropFilter:'blur(12px)',borderRadius:'14px',padding:'10px 16px',boxShadow:'0 8px 30px rgba(0,0,0,.5)'}}>
+      <span style={{fontSize:24}}>{ach.icon}</span>
+      <div>
+        <p style={{color:'#06b6d4',fontSize:10,fontWeight:700,letterSpacing:2,textTransform:'uppercase'}}>OBIETTIVO</p>
+        <p style={{color:'#fff',fontFamily:"'Bebas Neue'",fontSize:18,lineHeight:1}}>{ach.title}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── App ────────────────────────────────────────────────────────────────────
+function App(){
+  const [gameState,setGameState]=useState('LOADING');
+  const [score,setScore]=useState(0);
+  const [coins,setCoins]=useState(0);
+  const [profile,setProfile]=useState(null);
+  const [lang,setLang]=useState('en');
+  const [shopTab,setShopTab]=useState('skins');
+  const [activePowerUp,setActivePowerUp]=useState(null);
+  const [dailyChallenge,setDailyChallenge]=useState(null);
+  const [achQueue,setAchQueue]=useState([]);        // popups to show
+  const [combo,setCombo]=useState(0);
+  const [sessionStats,setSessionStats]=useState({maxCombo:0,obstacles:0,coins:0,isNewRecord:false});
+  // achProgress: {[id]: {progress, unlocked}}
+  const [achProgress,setAchProgress]=useState({});
+  const canvasRef=useRef(null);
+  const engineRef=useRef(null);
+  const gameStateRef=useRef(gameState);
+  useEffect(()=>{gameStateRef.current=gameState;},[gameState]);
+  const t=T[lang]||T.en;
+
+  // Re-sync audio config whenever language changes
+  useEffect(()=>{
+    if(!engineRef.current||!profile)return;
+    engineRef.current.setAudioConfig(
+      profile.selectedMusic||'default',
+      profile.selectedDeathPhrase||'default',
+      lang
+    );
+  },[lang,profile]);
+
+  // ── Load everything from localStorage ────────────────────────────────────
+  useEffect(()=>{
+    // Language
+    const bl=navigator.language.split('-')[0];if(T[bl])setLang(bl);
+    // Profile
+    const p=LS.get('ninja_profile',DEFAULT_PROFILE);setProfile(p);setCoins(p.coins);
+    // Achievement progress
+    const ap=LS.get('ninja_achievements',{});setAchProgress(ap);
+    // Daily challenge
+    const today=new Date().toDateString();
+    const saved=LS.get('ninja_daily_'+today,null);
+    if(saved){setDailyChallenge(saved);}
+    else{
+      const chs=[
+        {desc:'Raccogli 20 monete in una run',target:20,reward:50,type:'coins'},
+        {desc:'Raggiungi 50 punti',target:50,reward:100,type:'score'},
+        {desc:'Schiva 50 ostacoli',target:50,reward:75,type:'dodge'},
+        {desc:'Ottieni un combo di 8',target:8,reward:80,type:'combo'},
+      ];
+      const r=chs[Math.floor(Math.random()*chs.length)];
+      const nc={...r,progress:0,completed:false};
+      LS.set('ninja_daily_'+today,nc);setDailyChallenge(nc);
+    }
+    setGameState(localStorage.getItem('tutorialCompleted')==='true'?'START':'TUTORIAL_PROMPT');
+  },[]);
+
+  // ── Canvas resize ─────────────────────────────────────────────────────────
+  useEffect(()=>{
+    const resize=()=>{const c=canvasRef.current;if(!c)return;const S=Math.min(window.innerWidth/800,window.innerHeight/450);c.style.width=Math.round(800*S)+'px';c.style.height=Math.round(450*S)+'px';};
+    resize();
+    window.addEventListener('resize',resize);
+    window.addEventListener('orientationchange',()=>setTimeout(resize,100));
+    return()=>window.removeEventListener('resize',resize);
+  },[]);
+
+  // ── Portrait lock ─────────────────────────────────────────────────────────
+  useEffect(()=>{try{if(screen.orientation?.lock)screen.orientation.lock('portrait').catch(()=>{});}catch(e){}});
+
+  // ── Global tap → forward to engine if playing ─────────────────────────────
+  useEffect(()=>{
+    const onDown=(e)=>{
+      const st=gameStateRef.current;
+      if(st==='PLAYING'||st==='TUTORIAL_PLAYING'){
+        // Ignore taps on interactive UI elements
+        const tag=(e.target?.tagName||'').toLowerCase();
+        if(tag==='button'||tag==='select'||tag==='input')return;
+        e.preventDefault();
+        engineRef.current?.tap();
+      }
+    };
+    window.addEventListener('mousedown',onDown);
+    window.addEventListener('touchstart',onDown,{passive:false});
+    return()=>{window.removeEventListener('mousedown',onDown);window.removeEventListener('touchstart',onDown);};
+  },[]);
+
+  // ── Save profile helper ───────────────────────────────────────────────────
+  const saveProfile=useCallback((up)=>{
+    setProfile(up);setCoins(up.coins);
+    LS.set('ninja_profile',up);
+  },[]);
+
+  // ── Achievement checker ───────────────────────────────────────────────────
+  const checkAchievements=useCallback((score,combo,dodge,coins,totalCoins,currentAp)=>{
+    const ap={...currentAp};
+    const newlyUnlocked=[];
+    for(const ach of ACHIEVEMENTS){
+      if(ap[ach.id]?.unlocked)continue;
+      let val=0;
+      if(ach.type==='score')val=score;
+      else if(ach.type==='combo')val=combo;
+      else if(ach.type==='dodge')val=dodge;
+      else if(ach.type==='coins')val=coins;
+      else if(ach.type==='total_coins')val=totalCoins;
+      const prev=ap[ach.id]?.progress||0;
+      const newProg=Math.max(prev,val);
+      ap[ach.id]={progress:newProg,unlocked:newProg>=ach.target};
+      if(ap[ach.id].unlocked&&!currentAp[ach.id]?.unlocked)newlyUnlocked.push(ach);
+    }
+    LS.set('ninja_achievements',ap);
+    setAchProgress(ap);
+    if(newlyUnlocked.length)setAchQueue(q=>[...q,...newlyUnlocked]);
+    return ap;
+  },[]);
+
+  // ── Engine setup ──────────────────────────────────────────────────────────
+  useEffect(()=>{
+    if(canvasRef.current&&!engineRef.current)engineRef.current=new GameEngine(canvasRef.current);
+    if(!engineRef.current)return;
+    engineRef.current.setCallbacks(
+      // onScore
+      (s)=>{
+        setScore(s);
+        // Live check score-based achievements
+        setAchProgress(ap=>{
+          const mc=engineRef.current?.maxCombo||0;
+          const dc=engineRef.current?.dodgedObstacles||0;
+          const sc=engineRef.current?.sessionCoins||0;
+          checkAchievements(s,mc,dc,sc,(profile?.coins||0),ap);
+          return ap;
+        });
+      },
+      // onGameOver
+      async(finalScore,sCoins,dodged,maxCombo)=>{
+        setGameState('GAME_OVER');setActivePowerUp(null);setCombo(0);
+        const maxCoins=Math.floor(finalScore/2)+10,validCoins=Math.min(sCoins,maxCoins);
+        const isNewRecord=finalScore>(profile?.highScore||0)&&finalScore>0;
+        setSessionStats({maxCombo,obstacles:dodged,coins:validCoins,isNewRecord});
+        // Update daily challenge
+        let chalReward=0;
+        if(dailyChallenge&&!dailyChallenge.completed){
+          let np=dailyChallenge.progress;
+          if(dailyChallenge.type==='coins')np+=validCoins;
+          else if(dailyChallenge.type==='score')np=Math.max(np,finalScore);
+          else if(dailyChallenge.type==='dodge')np+=dodged;
+          else if(dailyChallenge.type==='combo')np=Math.max(np,maxCombo);
+          const done=np>=dailyChallenge.target;if(done)chalReward=dailyChallenge.reward;
+          const uc={...dailyChallenge,progress:np,completed:done};
+          LS.set('ninja_daily_'+new Date().toDateString(),uc);
+          setDailyChallenge(uc);
+        }
+        if(profile){
+          const newCoins=profile.coins+validCoins+chalReward;
+          const newHS=Math.max(profile.highScore,finalScore);
+          const up={...profile,coins:newCoins,highScore:newHS};
+          saveProfile(up);
+          // Final achievement check with total coins
+          setAchProgress(ap=>checkAchievements(finalScore,maxCombo,dodged,validCoins,newCoins,ap));
+        }
+      },
+      ()=>{localStorage.setItem('tutorialCompleted','true');setGameState('START');},
+      ()=>{},
+      (type)=>setActivePowerUp(type),
+      ()=>setActivePowerUp(null),
+      (c)=>setCombo(c),
+    );
+    return()=>{if(engineRef.current)engineRef.current.stop();};
+  },[profile,dailyChallenge,checkAchievements,saveProfile]);
+
+  const startGame=()=>{setGameState('PLAYING');setScore(0);setCombo(0);setActivePowerUp(null);engineRef.current?.start(false);};
+  const startTutorial=()=>{setGameState('TUTORIAL_PLAYING');setScore(0);engineRef.current?.start(true);};
+  const skipTutorial=()=>{localStorage.setItem('tutorialCompleted','true');setGameState('START');};
+  const shareScore=async()=>{const txt=`Ho schivato ostacoli in Ninja Revers con ${score} punti!`;if(navigator.share)try{await navigator.share({title:'Ninja Revers',text:txt});}catch(e){}else{navigator.clipboard?.writeText(txt);alert('Copiato!');}};
+  const buySkin=async(id,price)=>{if(!profile||profile.coins<price||profile.unlockedSkins.includes(id))return;saveProfile({...profile,coins:profile.coins-price,unlockedSkins:[...profile.unlockedSkins,id]});};
+  const selectSkin=async(id)=>{if(!profile?.unlockedSkins.includes(id))return;saveProfile({...profile,selectedSkin:id});const s=SKINS.find(s=>s.id===id);if(s&&engineRef.current)engineRef.current.setNinjaColor(s.color);};
+  const buyAudio=async(type,id,price)=>{if(!profile||profile.coins<price)return;const ul=type==='music'?profile.unlockedMusic:profile.unlockedDeathPhrases;if(ul.includes(id))return;const nu=[...ul,id];saveProfile(type==='music'?{...profile,coins:profile.coins-price,unlockedMusic:nu}:{...profile,coins:profile.coins-price,unlockedDeathPhrases:nu});};
+  const selectAudio=async(type,id)=>{if(!profile)return;const ul=type==='music'?profile.unlockedMusic:profile.unlockedDeathPhrases;if(!ul.includes(id))return;const up=type==='music'?{...profile,selectedMusic:id}:{...profile,selectedDeathPhrase:id};saveProfile(up);if(engineRef.current){const m=type==='music'?id:profile.selectedMusic;const dp=type==='deathPhrase'?id:profile.selectedDeathPhrase;engineRef.current.setAudioConfig(m,dp,lang);}};
+
+  const isPlaying=gameState==='PLAYING'||gameState==='TUTORIAL_PLAYING';
+  const isMenu=gameState==='START'||gameState==='GAME_OVER'||gameState==='LEADERBOARD'||gameState==='SHOP'||gameState==='ACHIEVEMENTS';
+  const grade=getGrade(score);
+  const tier=getComboTier(combo);
+  const PW={INVINCIBILITY:t.powerupInvincible,MULTIPLIER:t.powerupMultiplier,SLOW_MO:t.powerupSlowMo,MAGNET:t.powerupMagnet};
+  const PC={INVINCIBILITY:'#fbbf24',MULTIPLIER:'#c084fc',SLOW_MO:'#22d3ee',MAGNET:'#06b6d4'};
+
+  // Total/unlocked achievements
+  const totalAch=ACHIEVEMENTS.length;
+  const unlockedAch=ACHIEVEMENTS.filter(a=>achProgress[a.id]?.unlocked).length;
+
+  return(
+    <ErrorBoundary>
+      <div className="relative w-full bg-slate-950 overflow-hidden touch-none select-none flex items-center justify-center"
+           style={{height:'100%',width:'100%',position:'fixed',top:0,left:0}}>
+
+        {/* Canvas */}
+        <canvas id="game-canvas" ref={canvasRef} width={800} height={450}
+          style={{opacity:(isPlaying||gameState==='GAME_OVER')?1:0,transition:'opacity .5s'}}/>
+
+        {/* Menu background glow */}
+        {!isPlaying&&(
+          <div className="absolute inset-0 pointer-events-none z-0">
+            <div style={{background:'radial-gradient(ellipse at 20% 30%, rgba(6,182,212,.08) 0%, transparent 60%),radial-gradient(ellipse at 80% 70%, rgba(16,185,129,.06) 0%, transparent 60%)',position:'absolute',inset:0}}/>
+            <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:.04}} xmlns="http://www.w3.org/2000/svg"><defs><pattern id="g" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#06b6d4"/></pattern></defs><rect width="100%" height="100%" fill="url(#g)"/></svg>
+          </div>
+        )}
+
+        {/* Top-right HUD for menus: coins */}
+        {isMenu&&(
+          <div className="absolute top-0 right-0 flex items-center gap-2 z-20 pointer-events-auto"
+               style={{padding:'max(12px,env(safe-area-inset-top)) 12px 0 0'}}>
+            <div className="glass border border-yellow-500/20 text-yellow-400 px-3 py-2 rounded-xl flex items-center gap-1.5 font-bold text-base shadow-lg">
+              <CoinsIcon c="w-4 h-4"/>{coins}
+            </div>
+          </div>
+        )}
+
+        {/* Overlays */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+
+          {/* Tutorial */}
+          {gameState==='TUTORIAL_PROMPT'&&(
+            <div className="glass border-glow rounded-3xl p-8 text-center max-w-sm pointer-events-auto shadow-2xl mx-4 anim-scale-in"
+                 style={{border:'1px solid rgba(6,182,212,.2)'}}>
+              <div className="text-5xl mb-4 anim-float">🥷</div>
+              <h2 style={{fontFamily:"'Bebas Neue'",fontSize:38,color:'white',marginBottom:10}}>Tutorial</h2>
+              <p className="text-slate-300 mb-8 text-base leading-relaxed">{t.tutorialPrompt}</p>
+              <div className="flex flex-col gap-3">
+                <button onClick={startTutorial} className="bg-cyan-700 hover:bg-cyan-600 text-white py-4 rounded-2xl font-bold text-lg transition-all active:scale-95">{t.startTutorial}</button>
+                <button onClick={skipTutorial} className="glass text-slate-400 hover:text-white py-3 rounded-2xl font-semibold transition-all active:scale-95" style={{border:'1px solid rgba(100,116,139,.4)'}}>{t.skip}</button>
+              </div>
+            </div>
+          )}
+
+          {/* START */}
+          {gameState==='START'&&(
+            <div className="pointer-events-auto text-center flex flex-col items-center z-10 px-4 anim-slide-up">
+              <div className="anim-float mb-2">
+                <h1 style={{fontFamily:"'Bebas Neue'",fontSize:'clamp(60px,12vw,110px)',letterSpacing:'0.02em',color:'white',filter:'drop-shadow(0 0 30px rgba(6,182,212,.4))',lineHeight:1}}>
+                  NINJA<br/><span className="text-shimmer">REVERS</span>
+                </h1>
+              </div>
+
+              {dailyChallenge&&(
+                <div className="glass mb-8 max-w-xs w-full anim-scale-in"
+                     style={{border:'1px solid rgba(234,179,8,.2)',borderRadius:16,padding:'14px 16px'}}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span style={{color:'#facc15',fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:1,display:'flex',alignItems:'center',gap:6}}><Trophy c="w-3 h-3"/>{t.dailyChallenge}</span>
+                    <span style={{color:'#34d399',fontSize:12,fontWeight:700}}>+{dailyChallenge.reward} 🪙</span>
+                  </div>
+                  <p style={{color:'white',fontSize:13,marginBottom:8}}>{dailyChallenge.desc}</p>
+                  <div style={{background:'rgba(5,13,26,.8)',borderRadius:6,height:6,overflow:'hidden'}}>
+                    <div style={{height:'100%',borderRadius:6,background:dailyChallenge.completed?'#10b981':'#eab308',width:`${Math.min(100,(dailyChallenge.progress/dailyChallenge.target)*100)}%`,transition:'width .4s'}}/>
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#64748b',fontWeight:600,marginTop:4}}>
+                    <span>{dailyChallenge.progress}/{dailyChallenge.target}</span>
+                    {dailyChallenge.completed&&<span style={{color:'#34d399'}}>{t.completed}</span>}
+                  </div>
+                </div>
+              )}
+
+              <button onClick={startGame}
+                style={{fontFamily:"'Bebas Neue'",fontSize:42,color:'white',padding:'16px 80px',borderRadius:999,marginBottom:28,background:'linear-gradient(135deg,#0891b2,#10b981)',boxShadow:'0 0 40px rgba(6,182,212,.4),0 8px 30px rgba(0,0,0,.5)',border:'none',cursor:'pointer',transition:'transform .15s'}}
+                onMouseEnter={e=>e.target.style.transform='scale(1.04)'}
+                onMouseLeave={e=>e.target.style.transform='scale(1)'}
+                onMouseDown={e=>e.stopPropagation()}>
+                {t.play}
+              </button>
+
+              <div className="flex gap-4 mb-6">
+                {[
+                  {label:t.shop,icon:<Bag c="w-6 h-6 text-cyan-400"/>,state:'SHOP',col:'rgba(6,182,212,.5)'},
+                  {label:t.achievements,icon:<AchIco c="w-6 h-6 text-yellow-400"/>,state:'ACHIEVEMENTS',col:'rgba(234,179,8,.5)',badge:`${unlockedAch}/${totalAch}`},
+                ].map(b=>(
+                  <button key={b.state} onClick={()=>setGameState(b.state)} onMouseDown={e=>e.stopPropagation()}
+                    className="glass flex flex-col items-center gap-2 p-4 rounded-2xl transition-all active:scale-95"
+                    style={{border:`1px solid rgba(100,116,139,.3)`,minWidth:90,cursor:'pointer'}}>
+                    {b.icon}
+                    <span style={{color:'#cbd5e1',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1}}>{b.label}</span>
+                    {b.badge&&<span style={{background:'rgba(234,179,8,.15)',color:'#fbbf24',fontSize:10,fontWeight:700,borderRadius:99,padding:'1px 8px',border:'1px solid rgba(234,179,8,.2)'}}>{b.badge}</span>}
+                  </button>
+                ))}
+              </div>
+
+              {/* Lang + best score */}
+              <div className="flex items-center gap-3">
+                <select value={lang} onChange={e=>setLang(e.target.value)} onMouseDown={e=>e.stopPropagation()}
+                  style={{background:'rgba(5,20,40,.8)',color:'#94a3b8',border:'1px solid rgba(100,116,139,.3)',borderRadius:10,padding:'6px 10px',fontSize:12,fontWeight:700,outline:'none',cursor:'pointer'}}>
+                  {Object.keys(T).map(l=><option key={l} value={l}>{l.toUpperCase()}</option>)}
+                </select>
+                <div style={{background:'rgba(5,20,40,.7)',border:'1px solid rgba(100,116,139,.25)',borderRadius:10,padding:'6px 14px',display:'flex',alignItems:'center',gap:6}}>
+                  <Trophy c="w-3 h-3 text-yellow-400"/>
+                  <span style={{color:'#facc15',fontFamily:"'Bebas Neue'",fontSize:18,lineHeight:1}}>{profile?.highScore||0}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ACHIEVEMENTS */}
+          {gameState==='ACHIEVEMENTS'&&(
+            <div className="glass rounded-3xl w-full max-w-sm pointer-events-auto shadow-2xl mx-4 flex flex-col anim-scale-in"
+                 style={{maxHeight:'88vh',padding:'1.5rem',border:'1px solid rgba(6,182,212,.2)'}}>
+              <h2 style={{fontFamily:"'Bebas Neue'",fontSize:36,color:'white',textAlign:'center',marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
+                <AchIco c="w-7 h-7 text-yellow-400"/>{t.achievements}
+              </h2>
+              <p style={{color:'#64748b',textAlign:'center',fontSize:13,fontWeight:600,marginBottom:16}}>
+                {unlockedAch}/{totalAch} sbloccati
+              </p>
+              <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                {ACHIEVEMENTS.map(ach=>{
+                  const ap=achProgress[ach.id]||{progress:0,unlocked:false};
+                  const pct=Math.min(100,(ap.progress/ach.target)*100);
+                  return(
+                    <div key={ach.id} style={{borderRadius:14,padding:'12px 14px',background:ap.unlocked?'rgba(6,182,212,.08)':'rgba(5,13,26,.6)',border:`1px solid ${ap.unlocked?'rgba(6,182,212,.3)':'rgba(100,116,139,.2)'}`,display:'flex',alignItems:'center',gap:12}}>
+                      <span style={{fontSize:26,opacity:ap.unlocked?1:.4}}>{ach.icon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                          <p style={{color:ap.unlocked?'#e2e8f0':'#64748b',fontWeight:700,fontSize:14}}>{ach.title}</p>
+                          {ap.unlocked&&<span style={{color:'#06b6d4',fontSize:11,fontWeight:700}}>✓</span>}
+                        </div>
+                        <p style={{color:'#475569',fontSize:11,marginBottom:6}}>{ach.desc}</p>
+                        <div style={{background:'rgba(5,13,26,.8)',borderRadius:4,height:4,overflow:'hidden'}}>
+                          <div style={{height:'100%',borderRadius:4,background:ap.unlocked?'#06b6d4':'#334155',width:`${pct}%`,transition:'width .4s'}}/>
+                        </div>
+                        <p style={{color:'#475569',fontSize:10,fontWeight:600,marginTop:3}}>{ap.progress}/{ach.target}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button onClick={()=>setGameState('START')} onMouseDown={e=>e.stopPropagation()}
+                style={{marginTop:16,background:'rgba(30,41,59,.8)',border:'1px solid rgba(100,116,139,.3)',color:'white',padding:'14px',borderRadius:16,fontWeight:700,fontSize:15,cursor:'pointer',width:'100%'}}>
+                {t.menu}
+              </button>
+            </div>
+          )}
+
+          {/* SHOP */}
+          {gameState==='SHOP'&&(
+            <div className="glass rounded-3xl w-full max-w-sm pointer-events-auto shadow-2xl mx-4 flex flex-col anim-scale-in"
+                 style={{maxHeight:'88vh',padding:'1.5rem',border:'1px solid rgba(6,182,212,.2)'}}>
+              <h2 style={{fontFamily:"'Bebas Neue'",fontSize:36,color:'white',textAlign:'center',marginBottom:4,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}><Bag c="w-6 h-6 text-cyan-400"/>{t.shopTitle}</h2>
+              <p style={{color:'#64748b',textAlign:'center',fontSize:13,fontWeight:600,marginBottom:14}}>{t.customize}</p>
+              <div style={{display:'flex',gap:8,marginBottom:16}}>
+                {['skins','audio'].map(tab=>(
+                  <button key={tab} onClick={()=>setShopTab(tab)} onMouseDown={e=>e.stopPropagation()}
+                    style={{flex:1,padding:'10px',borderRadius:12,fontWeight:700,fontSize:13,cursor:'pointer',background:shopTab===tab?'#0e7490':'rgba(5,20,40,.8)',color:shopTab===tab?'white':'#64748b',border:`1px solid ${shopTab===tab?'rgba(6,182,212,.5)':'rgba(100,116,139,.3)'}`}}>
+                    {tab==='skins'?t.skins:t.audio}
+                  </button>
+                ))}
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                {shopTab==='skins'&&SKINS.map(skin=>{
+                  const isU=profile?.unlockedSkins.includes(skin.id),isSel=profile?.selectedSkin===skin.id,canA=(profile?.coins||0)>=skin.price;
+                  return(
+                    <div key={skin.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',borderRadius:14,border:`1px solid ${isSel?'rgba(6,182,212,.4)':'rgba(100,116,139,.2)'}`,background:isSel?'rgba(6,182,212,.08)':'rgba(5,13,26,.6)'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:12}}>
+                        <div style={{width:42,height:42,borderRadius:10,background:'#09090b',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:`inset 0 0 12px ${skin.color}44`}}>
+                          <div style={{width:16,height:8,borderRadius:4,background:skin.color,boxShadow:`0 0 8px ${skin.color}`}}/>
+                        </div>
+                        <div>
+                          <p style={{color:'white',fontWeight:600,fontSize:14}}>{skin.name}</p>
+                          {!isU&&<p style={{color:canA?'#facc15':'#475569',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:3}}><CoinsIcon c="w-3 h-3"/>{skin.price}</p>}
+                        </div>
+                      </div>
+                      {isSel
+                        ?<span style={{color:'#06b6d4',fontWeight:700,fontSize:11,background:'rgba(6,182,212,.1)',padding:'4px 10px',borderRadius:99,border:'1px solid rgba(6,182,212,.2)'}}>{t.selected}</span>
+                        :isU
+                          ?<button onClick={()=>selectSkin(skin.id)} onMouseDown={e=>e.stopPropagation()} style={{background:'rgba(30,41,59,.8)',border:'1px solid rgba(100,116,139,.4)',color:'white',padding:'6px 14px',borderRadius:10,fontWeight:700,fontSize:12,cursor:'pointer'}}>{t.use}</button>
+                          :<button onClick={()=>buySkin(skin.id,skin.price)} onMouseDown={e=>e.stopPropagation()} disabled={!canA} style={{background:canA?'#92400e':'rgba(30,41,59,.5)',color:canA?'#fde68a':'#475569',padding:'6px 14px',borderRadius:10,fontWeight:700,fontSize:12,cursor:canA?'pointer':'not-allowed',border:'none'}}>{t.buy}</button>
+                      }
+                    </div>
+                  );
+                })}
+                {shopTab==='audio'&&(<>
+                  <p style={{color:'#475569',fontWeight:700,fontSize:11,textTransform:'uppercase',letterSpacing:2,marginBottom:6}}>{t.music}</p>
+                  {MUSIC_TRACKS.map(tr=>{const isU=profile?.unlockedMusic.includes(tr.id),isSel=profile?.selectedMusic===tr.id,canA=(profile?.coins||0)>=tr.price;return(<div key={tr.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',borderRadius:14,border:`1px solid ${isSel?'rgba(6,182,212,.4)':'rgba(100,116,139,.2)'}`,background:isSel?'rgba(6,182,212,.08)':'rgba(5,13,26,.6)',marginBottom:8}}><div style={{display:'flex',alignItems:'center',gap:10}}><MusicIco c="w-4 h-4 text-slate-400"/><div><p style={{color:'white',fontWeight:600,fontSize:14}}>{tr.name}</p>{!isU&&<p style={{color:canA?'#facc15':'#475569',fontSize:11,fontWeight:700}}>{tr.price} 🪙</p>}</div></div>{isSel?<span style={{color:'#06b6d4',fontWeight:700,fontSize:11,background:'rgba(6,182,212,.1)',padding:'4px 10px',borderRadius:99}}>{t.selected}</span>:isU?<button onClick={()=>selectAudio('music',tr.id)} onMouseDown={e=>e.stopPropagation()} style={{background:'rgba(30,41,59,.8)',border:'1px solid rgba(100,116,139,.4)',color:'white',padding:'6px 14px',borderRadius:10,fontWeight:700,fontSize:12,cursor:'pointer'}}>{t.use}</button>:<button onClick={()=>buyAudio('music',tr.id,tr.price)} onMouseDown={e=>e.stopPropagation()} disabled={!canA} style={{background:canA?'#92400e':'rgba(30,41,59,.5)',color:canA?'#fde68a':'#475569',padding:'6px 14px',borderRadius:10,fontWeight:700,fontSize:12,cursor:canA?'pointer':'not-allowed',border:'none'}}>{t.buy}</button>}</div>);})}
+                  <p style={{color:'#475569',fontWeight:700,fontSize:11,textTransform:'uppercase',letterSpacing:2,margin:'12px 0 6px'}}>{t.deathPhrases}</p>
+                  {DEATH_PHRASES.map(ph=>{const isU=profile?.unlockedDeathPhrases.includes(ph.id),isSel=profile?.selectedDeathPhrase===ph.id,canA=(profile?.coins||0)>=ph.price,phraseText=ph.texts[lang]||ph.texts['en'];return(<div key={ph.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',borderRadius:14,border:`1px solid ${isSel?'rgba(6,182,212,.4)':'rgba(100,116,139,.2)'}`,background:isSel?'rgba(6,182,212,.08)':'rgba(5,13,26,.6)',marginBottom:8}}><div style={{display:'flex',alignItems:'center',gap:10}}><MicIco c="w-4 h-4 text-slate-400"/><div><p style={{color:'white',fontWeight:600,fontSize:14}}>{ph.name}</p><p style={{color:'#475569',fontSize:11,fontStyle:'italic'}}>"{phraseText}"</p>{!isU&&<p style={{color:canA?'#facc15':'#475569',fontSize:11,fontWeight:700}}>{ph.price} 🪙</p>}</div></div>{isSel?<span style={{color:'#06b6d4',fontWeight:700,fontSize:11,background:'rgba(6,182,212,.1)',padding:'4px 10px',borderRadius:99}}>{t.selected}</span>:isU?<button onClick={()=>selectAudio('deathPhrase',ph.id)} onMouseDown={e=>e.stopPropagation()} style={{background:'rgba(30,41,59,.8)',border:'1px solid rgba(100,116,139,.4)',color:'white',padding:'6px 14px',borderRadius:10,fontWeight:700,fontSize:12,cursor:'pointer'}}>{t.use}</button>:<button onClick={()=>buyAudio('deathPhrase',ph.id,ph.price)} onMouseDown={e=>e.stopPropagation()} disabled={!canA} style={{background:canA?'#92400e':'rgba(30,41,59,.5)',color:canA?'#fde68a':'#475569',padding:'6px 14px',borderRadius:10,fontWeight:700,fontSize:12,cursor:canA?'pointer':'not-allowed',border:'none'}}>{t.buy}</button>}</div>);})}
+                </>)}
+              </div>
+              <button onClick={()=>setGameState('START')} onMouseDown={e=>e.stopPropagation()}
+                style={{marginTop:16,background:'rgba(30,41,59,.8)',border:'1px solid rgba(100,116,139,.3)',color:'white',padding:'14px',borderRadius:16,fontWeight:700,fontSize:15,cursor:'pointer',width:'100%'}}>
+                {t.menu}
+              </button>
+            </div>
+          )}
+
+          {/* GAME OVER */}
+          {gameState==='GAME_OVER'&&(
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 pointer-events-auto"
+                 style={{background:'radial-gradient(ellipse at center, rgba(127,29,29,.9) 0%, rgba(5,13,26,.97) 100%)'}}>
+              {sessionStats.isNewRecord&&(
+                <div style={{fontFamily:"'Bebas Neue'",color:'#fbbf24',fontSize:22,letterSpacing:4,marginBottom:8,textShadow:'0 0 20px #fbbf24'}} className="anim-scale-in">
+                  ✦ {t.newRecord} ✦
+                </div>
+              )}
+              <h1 style={{fontFamily:"'Bebas Neue'",color:'white',fontSize:'clamp(42px,10vw,80px)',letterSpacing:4,textShadow:'0 0 30px rgba(239,68,68,.7)',marginBottom:20,textAlign:'center'}}>
+                {t.gameOver}
+              </h1>
+              <div className="glass w-full max-w-sm shadow-2xl" style={{borderRadius:24,padding:'1.5rem',border:'1px solid rgba(100,116,139,.2)'}}>
+                {/* Grade + score */}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:24,marginBottom:20}}>
+                  <div className={`anim-grade-pop ${grade.cls}`} style={{fontFamily:"'Bebas Neue'",fontSize:88,color:grade.col,lineHeight:1}}>{grade.l}</div>
+                  <div>
+                    <p style={{fontFamily:"'Bebas Neue'",fontSize:40,color:'white',lineHeight:1}}>{score}</p>
+                    <p style={{color:'#64748b',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:1}}>{t.score}</p>
+                    <p style={{fontSize:12,fontWeight:700,marginTop:4,color:grade.col}}>{grade.label}</p>
+                  </div>
+                </div>
+                {/* Stats */}
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:14}}>
+                  {[
+                    {label:t.bestScore,val:profile?.highScore||0,col:'#facc15'},
+                    {label:t.maxCombo,val:`×${sessionStats.maxCombo}`,col:'#f97316'},
+                    {label:t.obstacles,val:sessionStats.obstacles,col:'#06b6d4'},
+                  ].map(s=>(
+                    <div key={s.label} style={{background:'rgba(5,13,26,.7)',border:'1px solid rgba(100,116,139,.2)',borderRadius:12,padding:'10px 8px',textAlign:'center'}}>
+                      <p style={{fontFamily:"'Bebas Neue'",fontSize:24,color:s.col,lineHeight:1}}>{s.val}</p>
+                      <p style={{color:'#475569',fontSize:10,fontWeight:700,marginTop:2}}>{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Coins earned */}
+                <div style={{background:'rgba(234,179,8,.05)',border:'1px solid rgba(234,179,8,.15)',borderRadius:12,padding:'10px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                  <span style={{color:'#94a3b8',fontSize:13,fontWeight:600}}>Monete guadagnate</span>
+                  <span style={{color:'#facc15',fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:4}}><CoinsIcon c="w-4 h-4"/>+{sessionStats.coins}</span>
+                </div>
+                {/* Buttons */}
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  <button onClick={startGame} onMouseDown={e=>e.stopPropagation()}
+                    style={{fontFamily:"'Bebas Neue'",fontSize:28,color:'white',padding:'14px',borderRadius:16,background:'linear-gradient(135deg,#0891b2,#10b981)',border:'none',cursor:'pointer',boxShadow:'0 0 20px rgba(6,182,212,.3)'}}>
+                    {t.retry}
+                  </button>
+                  <div style={{display:'flex',gap:10}}>
+                    <button onClick={()=>setGameState('START')} onMouseDown={e=>e.stopPropagation()}
+                      style={{flex:1,background:'rgba(30,41,59,.8)',border:'1px solid rgba(100,116,139,.3)',color:'white',padding:'12px',borderRadius:14,fontWeight:700,fontSize:14,cursor:'pointer'}}>
+                      {t.menu}
+                    </button>
+                    <button onClick={shareScore} onMouseDown={e=>e.stopPropagation()}
+                      style={{flex:1,background:'rgba(37,99,235,.15)',border:'1px solid rgba(59,130,246,.3)',color:'#93c5fd',padding:'12px',borderRadius:14,fontWeight:700,fontSize:14,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                      <Share2 c="w-4 h-4"/>{t.share}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* HUD during play */}
+        {isPlaying&&(
+          <div className="absolute inset-0 pointer-events-none z-10">
+            <div className="absolute top-0 right-0 flex flex-col items-end gap-2"
+                 style={{padding:'max(12px,env(safe-area-inset-top)) 12px 0 0'}}>
+              <div style={{display:'flex',gap:8}}>
+                <div style={{background:'rgba(5,13,26,.8)',backdropFilter:'blur(10px)',border:'1px solid rgba(234,179,8,.2)',borderRadius:999,padding:'6px 12px',display:'flex',alignItems:'center',gap:6}}>
+                  <CoinsIcon c="w-4 h-4 text-yellow-400"/>
+                  <span style={{color:'white',fontWeight:700,fontSize:14}}>{coins}</span>
+                </div>
+                <div style={{background:'rgba(5,13,26,.8)',backdropFilter:'blur(10px)',border:'1px solid rgba(100,116,139,.3)',borderRadius:999,padding:'6px 16px',display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{color:'#64748b',fontWeight:700,fontSize:11,letterSpacing:2}}>{t.score}</span>
+                  <span style={{fontFamily:"'Bebas Neue'",color:'white',fontSize:28,lineHeight:1}}>{score}</span>
+                </div>
+              </div>
+              {combo>=2&&(
+                <div className="anim-combo-pop" style={{background:`${tier.col}22`,border:`1px solid ${tier.col}55`,borderRadius:999,padding:'5px 14px',display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontFamily:"'Bebas Neue'",fontSize:16,color:tier.col,lineHeight:1}}>COMBO</span>
+                  <span style={{fontFamily:"'Bebas Neue'",fontSize:24,color:tier.col,lineHeight:1,textShadow:`0 0 10px ${tier.col}`}}>×{combo}</span>
+                  {tier.mul>1&&<span style={{fontWeight:700,fontSize:11,color:tier.col}}>{tier.label}</span>}
+                </div>
+              )}
+              {activePowerUp&&(
+                <div style={{background:`${PC[activePowerUp]||'#fff'}22`,border:`1px solid ${PC[activePowerUp]||'#fff'}44`,borderRadius:999,padding:'5px 16px',animation:'glowPulse 1.5s infinite'}}>
+                  <span style={{fontFamily:"'Bebas Neue'",fontSize:16,color:PC[activePowerUp]||'#fff',letterSpacing:1}}>
+                    {PW[activePowerUp]||activePowerUp}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Achievement popups */}
+        <div style={{position:'absolute',bottom:24,left:'50%',transform:'translateX(-50%)',display:'flex',flexDirection:'column',gap:8,alignItems:'center',pointerEvents:'none',zIndex:60,width:'90%',maxWidth:340}}>
+          {achQueue.slice(0,3).map((ach,i)=>(
+            <AchievementPopup key={ach.id+'-'+i} ach={ach} onDone={()=>setAchQueue(q=>q.filter((_,j)=>j!==0))}/>
+          ))}
+        </div>
+      </div>
+    </ErrorBoundary>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
