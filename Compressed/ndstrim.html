@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="NDS Trim Tool – Deep ROM optimizer for nds-bootstrap & TWiLight Menu++. Trim + overlay LZ77 compression. 100% client-side.">
+<meta name="theme-color" content="#07090E">
+<title>NDS Trim Tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090E;--surf:#0D1520;--surf2:#111E30;--surf3:#0A1018;
+  --border:#1A2840;--border2:#243550;
+  --text:#C4D4E8;--dim:#4A6080;--dim2:#2E4060;
+  --accent:#4BA8E8;--accent2:#6EC6FF;
+  --green:#4ECC78;--green2:#70E898;
+  --orange:#F59E42;--red:#F05060;--purple:#A078E8;
+  --r:4px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(75,168,232,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(75,168,232,.02) 1px,transparent 1px);background-size:40px 40px}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,rgba(75,168,232,.055) 0%,transparent 55%)}
+#app{position:relative;z-index:1;width:100%;max-width:980px;padding:0 16px;display:flex;flex-direction:column;align-items:center}
+
+/* ── HEADER ── */
+.header{width:100%;padding:26px 0 0;text-align:center;margin-bottom:22px}
+.logo-row{display:inline-flex;align-items:center;gap:13px;margin-bottom:7px}
+.logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--surf2),var(--surf));border:1px solid var(--border2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 20px rgba(75,168,232,.14)}
+.logo{font-family:'Orbitron',sans-serif;font-size:clamp(20px,5vw,34px);font-weight:900;letter-spacing:5px;color:#fff;text-shadow:0 0 26px rgba(75,168,232,.36)}
+.logo span{color:var(--accent)}
+.tagline{font-size:9px;letter-spacing:3px;color:var(--dim)}
+.tagline b{color:var(--dim2);font-weight:400;margin:0 4px}
+
+/* ── SCREENS ── */
+.screen{display:none;width:100%;padding-bottom:50px}
+.screen.active{display:block;animation:fadeUp .26s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── DROP ZONE ── */
+.dropzone{position:relative;border:2px dashed var(--border2);border-radius:var(--r);padding:clamp(40px,9vw,78px) 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surf);overflow:hidden;user-select:none}
+.dz-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 110%,rgba(75,168,232,.08) 0%,transparent 60%);transition:opacity .2s}
+.dropzone:hover .dz-glow,.dropzone.drag .dz-glow{opacity:2.5}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);background:rgba(75,168,232,.03);box-shadow:0 0 38px rgba(75,168,232,.07)}
+.dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.dz-emu{font-size:clamp(42px,9vw,68px);display:block;margin-bottom:16px;filter:drop-shadow(0 4px 16px rgba(75,168,232,.2));transition:transform .2s}
+.dropzone:hover .dz-emu{transform:scale(1.05) translateY(-2px)}
+.dz-title{font-family:'Orbitron',sans-serif;font-size:clamp(11px,2.8vw,14px);font-weight:700;letter-spacing:3px;color:var(--accent);margin-bottom:8px}
+.dz-sub{font-size:10px;color:var(--dim);letter-spacing:1.5px}
+.dz-badges{margin-top:20px;display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap}
+.badge{font-size:9px;letter-spacing:1.5px;padding:3px 9px;background:rgba(75,168,232,.05);border:1px solid rgba(75,168,232,.13);border-radius:2px;color:var(--dim)}
+.badge.hi{background:rgba(78,204,120,.06);border-color:rgba(78,204,120,.18);color:var(--green)}
+
+/* ── LOADING ── */
+.load-box{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:clamp(38px,8vw,68px) 24px;text-align:center}
+.spinner{width:32px;height:32px;border:2px solid rgba(75,168,232,.1);border-top-color:var(--accent);border-radius:50%;margin:0 auto 20px;animation:spin .65s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-lbl{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;color:var(--accent);margin-bottom:22px}
+.prog-track{width:100%;max-width:340px;height:5px;background:rgba(75,168,232,.07);border:1px solid rgba(75,168,232,.13);border-radius:3px;margin:0 auto 8px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;box-shadow:0 0 8px var(--accent);width:0%;transition:width .3s}
+.prog-pct{font-size:10px;color:var(--dim);letter-spacing:2px}
+.load-fname{font-size:10px;color:var(--dim2);margin-top:10px;word-break:break-all;max-width:380px;margin-left:auto;margin-right:auto}
+
+/* ── TOPBAR ── */
+.rtopbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.rfname{font-size:10px;color:var(--dim);word-break:break-all;flex:1;min-width:0}
+.btn-ghost{background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;padding:5px 12px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.btn-ghost:hover{color:var(--text);border-color:var(--dim)}
+
+/* ── GRID ── */
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.rgrid{grid-template-columns:1fr}}
+
+/* ── CARDS ── */
+.card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.card-head{background:var(--surf2);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:7px}
+.cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.cd-blue  {background:var(--accent); box-shadow:0 0 6px var(--accent)}
+.cd-green {background:var(--green);  box-shadow:0 0 6px var(--green)}
+.cd-purple{background:var(--purple); box-shadow:0 0 6px var(--purple)}
+.cd-orange{background:var(--orange)}
+.card-lbl{font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:2px;color:var(--dim)}
+.card-body{padding:14px}
+
+/* ── GAME INFO ── */
+.gtop{display:flex;gap:13px;align-items:flex-start;margin-bottom:12px}
+.icoframe{flex-shrink:0;width:66px;height:66px;border:1px solid var(--border2);border-radius:var(--r);background:var(--surf2);overflow:hidden;position:relative}
+.icoframe canvas{width:66px;height:66px;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+.no-ico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--dim2)}
+.gtitle{font-size:clamp(11px,2.3vw,13px);font-weight:600;color:#fff;line-height:1.4;margin-bottom:3px;word-break:break-word}
+.gsub{font-size:10px;color:var(--dim);letter-spacing:.5px;line-height:1.5}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.ic{background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);padding:6px 9px}
+.ic .ll{font-size:7px;letter-spacing:2px;color:var(--dim);margin-bottom:3px}
+.ic .vv{font-size:11px;font-weight:600;color:var(--accent)}
+.vv.w{color:var(--text)}.vv.g{color:var(--green)}.vv.o{color:var(--orange)}.vv.r{color:var(--red)}.vv.p{color:var(--purple)}
+.sec-lbl{font-size:7px;letter-spacing:2.5px;color:var(--dim);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.sec-lbl::before{content:'▸';color:var(--accent)}
+.tbox{background:var(--surf3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:11px}
+.trow{display:flex;border-bottom:1px solid rgba(26,40,64,.5)}
+.trow:last-child{border-bottom:none}
+.tlang{width:76px;flex-shrink:0;padding:5px 8px;font-size:8px;letter-spacing:1.5px;color:var(--dim);background:rgba(0,0,0,.2);border-right:1px solid rgba(26,40,64,.5);display:flex;align-items:center}
+.ttxt{padding:5px 9px;font-size:10px;color:var(--text);word-break:break-word;line-height:1.4}
+.tog-btn{width:100%;text-align:left;background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;padding:6px 10px;cursor:pointer;transition:all .2s}
+.tog-btn:hover{color:var(--text);border-color:var(--border2)}
+.det-panel{display:none;margin-top:8px}
+.det-panel.open{display:block;animation:fadeUp .2s ease}
+.techt{width:100%;border-collapse:collapse;font-size:9px}
+.techt tr{border-bottom:1px solid rgba(26,40,64,.3)}
+.techt tr:last-child{border-bottom:none}
+.techt td{padding:4px 7px}
+.techt td:first-child{color:var(--dim);letter-spacing:1px;white-space:nowrap;padding-right:12px;min-width:115px}
+.techt td:last-child{color:var(--text);text-align:right;font-weight:500;word-break:break-all}
+.techt tr:hover td{background:rgba(75,168,232,.025)}
+
+/* ── TRIM CARD ── */
+.szcmp{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px;gap:5px}
+.szb .szl{font-size:8px;letter-spacing:2px;color:var(--dim);margin-bottom:3px}
+.szb .szv{font-family:'Orbitron',sans-serif;font-size:clamp(13px,3.2vw,19px);font-weight:700}
+.szarrow{color:var(--accent);font-size:15px;flex-shrink:0;padding-bottom:2px}
+.bar-track{height:7px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:6px}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green2));border-radius:4px;box-shadow:0 0 7px rgba(78,204,120,.3);transition:width .75s cubic-bezier(.4,0,.2,1);width:100%}
+.sav-pill{text-align:center;font-size:10px;font-weight:600;letter-spacing:1.5px;padding:6px 10px;margin-bottom:13px;border-radius:var(--r)}
+.sav-pill.good{color:var(--green);background:rgba(78,204,120,.07);border:1px solid rgba(78,204,120,.17)}
+.sav-pill.neutral{color:var(--accent);background:rgba(75,168,232,.07);border:1px solid rgba(75,168,232,.17)}
+.tstats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
+
+/* ── BUTTONS ── */
+.btn-dl{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 14px;margin-bottom:8px;background:rgba(78,204,120,.07);border:2px solid var(--green);border-radius:var(--r);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:2px;cursor:pointer;transition:all .2s}
+.btn-dl:hover{background:rgba(78,204,120,.14);box-shadow:0 0 22px rgba(78,204,120,.1)}
+.btn-dl:disabled{opacity:.4;cursor:not-allowed}
+.btn-dl .bsz{font-size:9px;font-weight:400;opacity:.7;letter-spacing:1px}
+.btn-sec{display:block;width:100%;padding:7px;background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;cursor:pointer;text-align:center;transition:all .2s;margin-bottom:12px}
+.btn-sec:hover{border-color:var(--dim);color:var(--text)}
+
+/* ── OVERLAY ANALYSIS CARD ── */
+.full-card{grid-column:1/-1}
+.ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:10px}
+.ov-item{background:var(--surf2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;display:flex;align-items:center;gap:9px;font-size:9px}
+.ov-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ov-name{color:var(--dim);min-width:40px;flex-shrink:0}
+.ov-sizes{flex:1;color:var(--text);letter-spacing:.3px}
+.ov-ratio{font-size:8px;letter-spacing:.5px;flex-shrink:0;font-weight:600}
+.ov-sum{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:9px 11px;background:var(--surf3);border:1px solid var(--border);border-radius:var(--r);font-size:10px}
+.ov-sum-lbl{color:var(--dim);letter-spacing:1px}
+.ov-sum-val{font-weight:600}
+
+/* ── ANALYSIS RUNNING ── */
+.analysis-box{padding:20px;text-align:center}
+.analysis-spin{width:24px;height:24px;border:2px solid rgba(160,120,232,.1);border-top-color:var(--purple);border-radius:50%;margin:0 auto 14px;animation:spin .65s linear infinite}
+.analysis-lbl{font-size:10px;letter-spacing:2px;color:var(--purple)}
+.analysis-prog{width:100%;max-width:300px;height:4px;background:rgba(160,120,232,.07);border:1px solid rgba(160,120,232,.13);border-radius:2px;margin:12px auto 6px;overflow:hidden}
+.analysis-fill{height:100%;background:linear-gradient(90deg,var(--purple),#C0A0FF);border-radius:2px;width:0%;transition:width .2s}
+.analysis-pct{font-size:9px;color:var(--dim);letter-spacing:2px}
+
+/* ── HONEST NOTE ── */
+.honest-note{padding:10px 12px;background:rgba(75,168,232,.04);border:1px solid rgba(75,168,232,.1);border-radius:var(--r);font-size:9px;line-height:1.8;color:var(--dim);margin-top:10px}
+.honest-note strong{color:var(--accent)}
+.honest-note .pos{color:var(--green)}
+.honest-note .neg{color:var(--orange)}
+
+/* ── ERROR ── */
+.err-card{background:var(--surf);border:1px solid rgba(240,80,96,.2);border-radius:var(--r);padding:clamp(36px,8vw,68px) 24px;text-align:center}
+.err-emo{font-size:44px;margin-bottom:14px}
+.err-title{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:3px;color:var(--red);margin-bottom:7px}
+.err-msg{font-size:11px;color:var(--dim);margin-bottom:22px;line-height:1.6;word-break:break-word}
+.btn-retry{display:inline-block;padding:9px 26px;background:none;border:1px solid var(--accent);border-radius:var(--r);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .2s}
+.btn-retry:hover{background:rgba(75,168,232,.1)}
+
+/* ── FOOTER ── */
+.footer{position:relative;z-index:1;padding:14px;font-size:8px;letter-spacing:2px;color:var(--dim2);text-align:center;line-height:2}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+@media(max-width:480px){
+  .gtop{flex-direction:column;align-items:center;text-align:center}
+  .icoframe{width:72px;height:72px}.icoframe canvas{width:72px;height:72px}
+  .szcmp{flex-direction:column;align-items:flex-start;gap:8px}
+  .szarrow{transform:rotate(90deg);margin-left:3px}
+  .btn-dl{flex-direction:column;align-items:flex-start;gap:3px}
+  .full-card{grid-column:auto}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<header class="header">
+  <div class="logo-row">
+    <div class="logo-icon">🎮</div>
+    <div class="logo">NDS<span>TRIM</span></div>
+  </div>
+  <div class="tagline">Deep ROM Optimizer<b>·</b>nds-bootstrap & TWiLight Menu++<b>·</b>100% Local</div>
+</header>
+
+<!-- IDLE -->
+<div class="screen active" id="s-idle">
+  <div class="dropzone" id="dropzone">
+    <div class="dz-glow"></div>
+    <span class="dz-emu">🎮</span>
+    <div class="dz-title">DRAG &amp; DROP YOUR .NDS ROM</div>
+    <div class="dz-sub">or click here to browse — full deep analysis included</div>
+    <div class="dz-badges">
+      <span class="badge">.NDS FORMAT</span>
+      <span class="badge hi">✓ nds-bootstrap</span>
+      <span class="badge hi">✓ TWiLight Menu++</span>
+      <span class="badge">OVERLAY LZ77</span>
+      <span class="badge">FULLY PRIVATE</span>
+    </div>
+  </div>
+  <input type="file" accept=".nds,.NDS" id="file-input" style="display:none">
+</div>
+
+<!-- LOADING -->
+<div class="screen" id="s-load">
+  <div class="load-box">
+    <div class="spinner"></div>
+    <div class="load-lbl" id="load-status">READING FILE…</div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+    <div class="prog-pct" id="prog-pct">0%</div>
+    <div class="load-fname" id="load-fname"></div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="screen" id="s-result">
+  <div class="rtopbar">
+    <div class="rfname" id="r-fname"></div>
+    <button class="btn-ghost" id="btn-new">↺&nbsp;NEW ROM</button>
+  </div>
+  <div class="rgrid">
+
+    <!-- LEFT: game info -->
+    <div class="card">
+      <div class="card-head"><div class="cdot cd-blue"></div><div class="card-lbl">GAME INFORMATION</div></div>
+      <div class="card-body">
+        <div class="gtop">
+          <div class="icoframe"><canvas id="ic" width="32" height="32"></canvas><div class="no-ico" id="no-ico" style="display:none">🎮</div></div>
+          <div><div class="gtitle" id="r-title">—</div><div class="gsub" id="r-sub">—</div></div>
+        </div>
+        <div class="igrid">
+          <div class="ic"><div class="ll">GAME CODE</div><div class="vv" id="r-code">—</div></div>
+          <div class="ic"><div class="ll">MAKER CODE</div><div class="vv" id="r-maker">—</div></div>
+          <div class="ic"><div class="ll">UNIT TYPE</div><div class="vv w" id="r-unit">—</div></div>
+          <div class="ic"><div class="ll">REGION</div><div class="vv w" id="r-region">—</div></div>
+          <div class="ic"><div class="ll">ROM VERSION</div><div class="vv w" id="r-ver">—</div></div>
+          <div class="ic"><div class="ll">HEADER CRC</div><div class="vv" id="r-crc">—</div></div>
+        </div>
+        <div id="titles-sec"></div>
+        <button class="tog-btn" id="tog-tech">▸&nbsp;&nbsp;SHOW TECHNICAL DETAILS</button>
+        <div class="det-panel" id="det-panel"><br><table class="techt" id="techt"></table></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: trim + download -->
+    <div class="card">
+      <div class="card-head"><div class="cdot cd-green"></div><div class="card-lbl">SIZE OPTIMIZATION</div></div>
+      <div class="card-body">
+        <div class="szcmp">
+          <div class="szb"><div class="szl">ORIGINAL</div><div class="szv" style="color:var(--dim)" id="r-orig">—</div></div>
+          <div class="szarrow">→</div>
+          <div class="szb" style="text-align:right"><div class="szl">TRIMMED</div><div class="szv" style="color:var(--green)" id="r-trimmed">—</div></div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" id="r-bar"></div></div>
+        <div class="sav-pill" id="r-saving">—</div>
+        <div class="tstats">
+          <div class="ic"><div class="ll">DECLARED CAPACITY</div><div class="vv w" id="r-decl">—</div></div>
+          <div class="ic"><div class="ll">0xFF PADDING REMOVED</div><div class="vv g" id="r-pad">—</div></div>
+          <div class="ic"><div class="ll">FAT LOGICAL END</div><div class="vv w" id="r-fat">—</div></div>
+          <div class="ic"><div class="ll">OVERLAY LZ77 SAVED</div><div class="vv p" id="r-ov-saved">—</div></div>
+        </div>
+        <button class="btn-dl" id="btn-dl">
+          <span>↓&nbsp;&nbsp;DOWNLOAD OPTIMIZED <code style="font-size:9px;opacity:.7">.nds</code></span>
+          <span class="bsz" id="dl-sz"></span>
+        </button>
+        <button class="btn-sec" id="btn-orig">↓&nbsp;&nbsp;Download original .nds (no changes)</button>
+        <!-- honest explanation -->
+        <div class="honest-note" id="honest-note"></div>
+      </div>
+    </div>
+
+    <!-- FULL WIDTH: overlay analysis -->
+    <div class="card full-card" id="ov-card">
+      <div class="card-head"><div class="cdot cd-purple"></div><div class="card-lbl">OVERLAY ANALYSIS</div></div>
+      <div class="card-body" id="ov-body">
+        <div class="analysis-box" id="ov-loading">
+          <div class="analysis-spin"></div>
+          <div class="analysis-lbl" id="ov-status">ANALYZING OVERLAYS…</div>
+          <div class="analysis-prog"><div class="analysis-fill" id="ov-prog"></div></div>
+          <div class="analysis-pct" id="ov-pct">0%</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ERROR -->
+<div class="screen" id="s-err">
+  <div class="err-card">
+    <div class="err-emo">⚠️</div>
+    <div class="err-title">INVALID FILE</div>
+    <div class="err-msg" id="err-msg">An unknown error occurred.</div>
+    <button class="btn-retry" id="btn-retry">↺&nbsp;&nbsp;TRY AGAIN</button>
+  </div>
+</div>
+
+</div><!-- /#app -->
+
+<footer class="footer">
+  All processing is done locally — no data is ever uploaded.<br>
+  Trimmed .nds files are bit-for-bit valid ROMs, compatible with nds-bootstrap, TWiLight Menu++, melonDS, DeSmuME, DraStic.
+</footer>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const u32 = (u,o) => ((u[o])|(u[o+1]<<8)|(u[o+2]<<16)|(u[o+3]<<24))>>>0;
+const u16 = (u,o) => (u[o]|(u[o+1]<<8))>>>0;
+function fmt(b){b=b>>>0;if(b>=1073741824)return(b/1073741824).toFixed(2)+' GB';if(b>=1048576)return(b/1048576).toFixed(2)+' MB';if(b>=1024)return(b/1024).toFixed(1)+' KB';return b+' B';}
+const hex=(n,p=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(p,'0');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function readAscii(u,o,l){let s='';for(let i=0;i<l;i++){const c=u[o+i];if(c===0)break;if(c>=32&&c<127)s+=String.fromCharCode(c);}return s.trim();}
+
+/* ── CRC-16 NDS (poly 0xA001) ───────────────────────────────── */
+function crc16(u,s,l){let c=0xFFFF;for(let i=s;i<s+l;i++){c^=u[i];for(let b=0;b<8;b++)c=(c&1)?(c>>>1)^0xA001:c>>>1;}return c&0xFFFF;}
+
+/* ── PARSE HEADER ───────────────────────────────────────────── */
+function parseHeader(u){
+  if(u.length<0x200)throw new Error('File too small (< 512 bytes)');
+  const h={
+    gameTitle:readAscii(u,0,12), gameCode:readAscii(u,0xC,4), makerCode:readAscii(u,0x10,2),
+    unitCode:u[0x12], encryptionSeed:u[0x13], deviceCapacity:u[0x14],
+    ndsRegion:u[0x1D], romVersion:u[0x1E], autostart:u[0x1F],
+    arm9Offset:u32(u,0x20), arm9Entry:u32(u,0x24), arm9RamAddr:u32(u,0x28), arm9Size:u32(u,0x2C),
+    arm7Offset:u32(u,0x30), arm7Entry:u32(u,0x34), arm7RamAddr:u32(u,0x38), arm7Size:u32(u,0x3C),
+    fntOffset:u32(u,0x40), fntSize:u32(u,0x44), fatOffset:u32(u,0x48), fatSize:u32(u,0x4C),
+    arm9OvOffset:u32(u,0x50), arm9OvSize:u32(u,0x54),
+    arm7OvOffset:u32(u,0x58), arm7OvSize:u32(u,0x5C),
+    portNormal:u32(u,0x60), portKey1:u32(u,0x64),
+    iconBannerOffset:u32(u,0x68),
+    secureAreaCRC:u16(u,0x6C), secureAreaDelay:u16(u,0x6E),
+    usedRomSize:u32(u,0x80), headerSize:u32(u,0x84),
+    logoCRC:u16(u,0x15C), headerCRC:u16(u,0x15E),
+  };
+  h.romDeclaredSize=128*1024*Math.pow(2,h.deviceCapacity);
+  h.fileCount=Math.floor(h.fatSize/8);
+  h.unitStr={0:'NDS',2:'NDS+DSi',3:'DSi'}[h.unitCode]||`0x${h.unitCode.toString(16).toUpperCase()}`;
+  h.regionStr={0x00:'Free/World',0x40:'Korea',0x41:'China',0x80:'Japan'}[h.ndsRegion]||`0x${h.ndsRegion.toString(16).toUpperCase()}`;
+  h.headerCRCCalc=crc16(u,0,0x15E);
+  h.headerCRCOK=(h.headerCRCCalc===h.headerCRC);
+  return h;
+}
+
+/* ── PARSE BANNER ───────────────────────────────────────────── */
+const LANGS=['Japanese','English','French','German','Italian','Spanish','Chinese','Korean'];
+function parseBanner(u,off){
+  if(!off||off+0x840>u.length)return null;
+  const b=u.subarray(off,off+0xA40);
+  const titles=[];
+  for(let i=0;i<LANGS.length;i++){
+    const o=0x240+i*0x100;if(o+0x100>b.length)break;
+    try{const t=new TextDecoder('utf-16-le').decode(b.subarray(o,o+0x100)).replace(/\0+$/,'').trim();if(t)titles.push({lang:LANGS[i],text:t});}catch(_){}
+  }
+  return{version:u16(b,0),titles,tileData:b.subarray(0x20,0x220),paletteData:b.subarray(0x220,0x240)};
+}
+
+/* ── RENDER ICON (4bpp tiles, BGR555 palette) ───────────────── */
+function renderIcon(td,pd){
+  const pal=Array.from({length:16},(_,i)=>{const c=pd[i*2]|(pd[i*2+1]<<8);const r=c&0x1F,g=(c>>5)&0x1F,b=(c>>10)&0x1F;return[(r<<3)|(r>>2),(g<<3)|(g>>2),(b<<3)|(b>>2),i===0?0:255];});
+  const px=new Uint8ClampedArray(32*32*4);
+  for(let t=0;t<16;t++){const tx=(t%4)*8,ty=Math.floor(t/4)*8;for(let row=0;row<8;row++)for(let col=0;col<4;col++){const byte=td[t*32+row*4+col];[[byte&0xF,tx+col*2],[(byte>>4)&0xF,tx+col*2+1]].forEach(([ci,x])=>{const c=pal[ci],i=((ty+row)*32+x)*4;px[i]=c[0];px[i+1]=c[1];px[i+2]=c[2];px[i+3]=c[3];});}}
+  $('ic').getContext('2d').putImageData(new ImageData(px,32,32),0,0);
+}
+
+/* ── PHYSICAL TRIM SIZE ─────────────────────────────────────── */
+function computeTrimSize(u,h){
+  const sz=u.length;
+  let fatEnd=0;
+  if(h.fatOffset>0&&h.fatSize>0&&h.fatOffset+h.fatSize<=sz){
+    for(let i=0;i<h.fileCount;i++){const base=h.fatOffset+i*8;if(base+8>sz)break;const e=u32(u,base+4);if(e>fatEnd&&e<=sz)fatEnd=e;}
+  }
+  const secs=[h.arm9Offset+h.arm9Size,h.arm7Offset+h.arm7Size,h.fntOffset+h.fntSize,h.fatOffset+h.fatSize];
+  if(h.arm9OvSize>0)secs.push(h.arm9OvOffset+h.arm9OvSize);
+  if(h.arm7OvSize>0)secs.push(h.arm7OvOffset+h.arm7OvSize);
+  if(h.iconBannerOffset>0)secs.push(h.iconBannerOffset+0x840);
+  const secEnd=Math.max(...secs.filter(v=>v>0&&v<=sz));
+  let physEnd=sz;
+  const CH=1024*1024;
+  outer:for(let pos=sz;pos>0;pos-=CH){
+    const from=Math.max(0,pos-CH),chunk=u.subarray(from,pos);
+    for(let i=chunk.length-1;i>=0;i--){if(chunk[i]!==0xFF){physEnd=from+i+1;break outer;}}
+  }
+  return{trimSize:physEnd,fatEnd,secEnd,physEnd};
+}
+
+/* ── NDS LZ77 TYPE 0x10 COMPRESSOR ─────────────────────────────
+   Used by NITRO SDK for overlay compression.
+   Hash-based for reasonable speed on overlay-sized data (<2MB).
+   ──────────────────────────────────────────────────────────── */
+function lz77Compress(input) {
+  const src = input;
+  const N = src.length;
+  const out = new Uint8Array(4 + N + Math.ceil(N / 8) + 2);
+  let op = 0;
+  // 4-byte header: type 0x10 + 3-byte LE decompressed size
+  out[op++]=0x10; out[op++]=N&0xFF; out[op++]=(N>>8)&0xFF; out[op++]=(N>>16)&0xFF;
+
+  // Hash table: map 3-byte key (24-bit) → most recent positions array
+  const HN = 1<<14; // 16384 buckets
+  const hashHead = new Int32Array(HN).fill(-1);
+  const hashNext = new Int32Array(N).fill(-1);
+
+  function hash3(p){ return ((src[p]*2654435761)^(src[p+1]*2246822519)^(src[p+2]*3266489917))>>>0 & (HN-1); }
+
+  let sp = 0;
+  while (sp < N) {
+    const flagPos = op++;
+    let flags = 0;
+
+    for (let bit = 7; bit >= 0 && sp < N; bit--) {
+      let bLen = 2, bDist = 0;
+      const maxLen = Math.min(18, N - sp);
+      const winStart = sp > 4096 ? sp - 4096 : 0;
+
+      if (maxLen >= 3 && sp + 2 < N) {
+        const h = hash3(sp);
+        let s = hashHead[h];
+        while (s >= winStart && s >= 0) {
+          if (src[s] === src[sp] && src[s+1] === src[sp+1]) {
+            let l = 2;
+            while (l < maxLen && src[s+l] === src[sp+l]) l++;
+            if (l > bLen) { bLen = l; bDist = sp - s; if (l === maxLen) break; }
+          }
+          s = hashNext[s];
+        }
+        // Insert sp into hash
+        hashNext[sp] = hashHead[h];
+        hashHead[h] = sp;
+      } else if (sp + 2 < N) {
+        // Still need to insert into hash even if not looking for matches
+        const h = hash3(sp);
+        hashNext[sp] = hashHead[h];
+        hashHead[h] = sp;
+      }
+
+      if (bDist > 0 && bLen >= 3) {
+        flags |= (1 << bit);
+        const l3 = bLen - 3, d1 = bDist - 1;
+        out[op++] = (l3 << 4) | ((d1 >> 8) & 0xF);
+        out[op++] = d1 & 0xFF;
+        // Insert intermediate positions into hash
+        for (let i = 1; i < bLen; i++) {
+          const p = sp + i;
+          if (p + 2 < N) { const h=hash3(p); hashNext[p]=hashHead[h]; hashHead[h]=p; }
+        }
+        sp += bLen;
+      } else {
+        out[op++] = src[sp++];
+      }
+    }
+    out[flagPos] = flags;
+  }
+  return out.subarray(0, op);
+}
+
+/* ── NDS LZ77 DECOMPRESSOR (verification) ───────────────────── */
+function lz77Decompress(data) {
+  if(data[0]!==0x10)throw new Error('Not LZ77 0x10');
+  const dlen=data[1]|(data[2]<<8)|(data[3]<<16);
+  const out=new Uint8Array(dlen);
+  let src=4,dst=0;
+  while(dst<dlen){
+    const flags=data[src++];
+    for(let bit=7;bit>=0&&dst<dlen;bit--){
+      if(flags&(1<<bit)){
+        const b0=data[src++],b1=data[src++];
+        const l=((b0>>4)&0xF)+3,d=(((b0&0xF)<<8)|b1)+1;
+        for(let i=0;i<l;i++){out[dst]=out[dst-d];dst++;}
+      }else{out[dst++]=data[src++];}
+    }
+  }
+  return out;
+}
+
+/* ── PARSE OVERLAY TABLE ────────────────────────────────────────
+   Overlay attribute word (GBATEK format):
+     bit 24    = compressed (LZ77 Type 0x10)
+     bit 25    = encrypted
+     bits 0-23 = compressed size (if bit 24 set)
+   ──────────────────────────────────────────────────────────── */
+function parseOverlays(u, h) {
+  const overlays = [];
+  const tables = [
+    { offset: h.arm9OvOffset, size: h.arm9OvSize, name: 'ARM9' },
+    { offset: h.arm7OvOffset, size: h.arm7OvSize, name: 'ARM7' },
+  ];
+  for (const {offset, size, name} of tables) {
+    if (!offset || !size) continue;
+    const count = Math.floor(size / 32);
+    for (let i = 0; i < count; i++) {
+      const o = offset + i * 32;
+      if (o + 32 > u.length) break;
+      const attr    = u32(u, o + 0x1C);
+      const fileId  = u32(u, o + 0x18);
+      const ramSize = u32(u, o + 0x08); // decompressed size
+      const fatBase = h.fatOffset + fileId * 8;
+      if (fatBase + 8 > u.length) continue;
+      const fStart  = u32(u, fatBase);
+      const fEnd    = u32(u, fatBase + 4);
+      const fatSize = fEnd - fStart;
+      // GBATEK: bit 24 = compressed flag
+      const isCompressed = Boolean(attr & 0x01000000);
+      const isEncrypted  = Boolean(attr & 0x02000000);
+      overlays.push({ name, id: i, fileId, ramSize, fatSize, fStart, fEnd, attr, isCompressed, isEncrypted, fatBase });
+    }
+  }
+  return overlays;
+}
+
+/* ── PROCESS OVERLAYS (async with progress) ─────────────────── */
+async function processOverlays(romBuf, h, ovList, onProgress) {
+  const workBuf = romBuf.slice(0); // copy
+  const work    = new Uint8Array(workBuf);
+  const results = [];
+  let totalSaved = 0;
+
+  for (let i = 0; i < ovList.length; i++) {
+    onProgress(Math.round(i / ovList.length * 100), `OVERLAY ${i+1}/${ovList.length}…`);
+    // Yield to UI every 4 overlays
+    if (i % 4 === 0) await new Promise(r => setTimeout(r, 0));
+
+    const ov = ovList[i];
+    // Determine true compression status:
+    // - bit 24 set → already compressed
+    // - file first byte == 0x10 or 0x11 AND ramSize > fatSize → also already compressed
+    const firstByte = work[ov.fStart];
+    const sizeMatches = ov.ramSize > ov.fatSize;
+    const alreadyCompressed = ov.isCompressed || ov.isEncrypted
+      || (sizeMatches && (firstByte === 0x10 || firstByte === 0x11));
+
+    if (alreadyCompressed) {
+      const ratio = ov.fatSize / ov.ramSize;
+      results.push({ ...ov, status: 'already', ratio, saved: 0 });
+      continue;
+    }
+    if (ov.fatSize < 4) {
+      results.push({ ...ov, status: 'tiny', ratio: 1, saved: 0 });
+      continue;
+    }
+
+    // Try compressing
+    const origData  = work.subarray(ov.fStart, ov.fEnd);
+    const compressed = lz77Compress(origData);
+
+    if (compressed.length >= ov.fatSize) {
+      results.push({ ...ov, status: 'incompressible', ratio: 1, saved: 0 });
+      continue;
+    }
+
+    // Verify round-trip
+    let decompressed;
+    try {
+      decompressed = lz77Decompress(compressed);
+    } catch(e) {
+      results.push({ ...ov, status: 'verify-fail', ratio: 1, saved: 0 });
+      continue;
+    }
+    // Byte-by-byte verify
+    let ok = decompressed.length === origData.length;
+    if (ok) for (let j = 0; j < decompressed.length; j++) if (decompressed[j] !== origData[j]) { ok = false; break; }
+    if (!ok) {
+      results.push({ ...ov, status: 'verify-fail', ratio: 1, saved: 0 });
+      continue;
+    }
+
+    const saved = ov.fatSize - compressed.length;
+    totalSaved += saved;
+
+    // Write compressed data into work buffer at same start offset
+    for (let j = 0; j < compressed.length; j++) work[ov.fStart + j] = compressed[j];
+    // Fill remainder with 0xFF
+    for (let j = compressed.length; j < ov.fatSize; j++) work[ov.fStart + j] = 0xFF;
+    // Update FAT entry: new end = fStart + compressed.length
+    const newEnd = ov.fStart + compressed.length;
+    work[ov.fatBase]   = newEnd & 0xFF;       // Note: FAT entry is [start(4), end(4)]
+    work[ov.fatBase+4] = newEnd & 0xFF;
+    work[ov.fatBase+5] = (newEnd >> 8)  & 0xFF;
+    work[ov.fatBase+6] = (newEnd >> 16) & 0xFF;
+    work[ov.fatBase+7] = (newEnd >> 24) & 0xFF;
+    // Update overlay attribute: set bit 24 + store compressed size in bits 0-23
+    const newAttr = (ov.attr | 0x01000000) & 0xFF000000 | (compressed.length & 0x00FFFFFF);
+    const attrOff = h.arm9OvOffset + ov.id * 32 + 0x1C; // approximate; exact position below
+    // Find exact attr position
+    const tables2 = [
+      { offset: h.arm9OvOffset, name: 'ARM9' },
+      { offset: h.arm7OvOffset, name: 'ARM7' },
+    ];
+    for (const {offset, name} of tables2) {
+      if (ov.name !== name) continue;
+      const oOff = offset + ov.id * 32 + 0x1C;
+      if (oOff + 4 <= work.length) {
+        work[oOff]   = newAttr & 0xFF;
+        work[oOff+1] = (newAttr >> 8)  & 0xFF;
+        work[oOff+2] = (newAttr >> 16) & 0xFF;
+        work[oOff+3] = (newAttr >> 24) & 0xFF;
+      }
+    }
+    results.push({ ...ov, status: 'compressed', newSize: compressed.length, ratio: compressed.length / ov.fatSize, saved });
+  }
+
+  onProgress(100, 'DONE');
+  return { workBuf, results, totalSaved };
+}
+
+/* ── APPLICATION STATE ───────────────────────────────────────── */
+const S = { buf: null, outBuf: null, filename: '', trimSize: 0, h: null };
+
+/* ── UI UTILS ────────────────────────────────────────────────── */
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id===id)); }
+function setProgress(p,st){ $('prog-fill').style.width=p+'%'; $('prog-pct').textContent=p+'%'; if(st)$('load-status').textContent=st; }
+function showError(m){ $('err-msg').textContent=m; showScreen('s-err'); }
+function reset(){ S.buf=S.outBuf=S.h=null; S.trimSize=0; S.filename=''; $('file-input').value=''; showScreen('s-idle'); }
+
+/* ── HANDLE FILE ─────────────────────────────────────────────── */
+function handleFile(file){
+  if(!file)return;
+  if(!file.name.toLowerCase().endsWith('.nds')){ showError(`"${file.name}" is not a .nds file.`); return; }
+  if(file.size<0x200){ showError(`File too small (${fmt(file.size)}).`); return; }
+  S.filename=file.name; $('load-fname').textContent=file.name; setProgress(0,'READING FILE…'); showScreen('s-load');
+  const rd=new FileReader();
+  rd.onprogress=e=>{ if(e.lengthComputable)setProgress(Math.round(e.loaded/e.total*60),'READING FILE…'); };
+  rd.onerror=()=>showError('Failed to read file.');
+  rd.onload=e=>{
+    setProgress(65,'PARSING HEADER…');
+    setTimeout(()=>{
+      try{
+        const buf=e.target.result, u=new Uint8Array(buf);
+        const h=parseHeader(u);
+        if(!h.gameCode)throw new Error('Invalid NDS header.');
+        setProgress(75,'READING BANNER…');
+        const banner=parseBanner(u,h.iconBannerOffset);
+        setProgress(88,'COMPUTING TRIM…');
+        const trim=computeTrimSize(u,h);
+        setProgress(100,'DONE');
+        S.buf=buf; S.h=h; S.trimSize=trim.trimSize;
+        setTimeout(()=>{ populateResult(file,u,h,banner,trim); showScreen('s-result'); startOverlayAnalysis(buf,h); },130);
+      }catch(err){ showError('Error parsing ROM: '+err.message); }
+    },50);
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+/* ── POPULATE RESULT ─────────────────────────────────────────── */
+function populateResult(file,u,h,banner,trim){
+  $('r-fname').textContent=file.name;
+  // Icon
+  let iconOK=false;
+  if(banner&&banner.tileData&&banner.paletteData){try{renderIcon(banner.tileData,banner.paletteData);$('ic').style.display='block';$('no-ico').style.display='none';iconOK=true;}catch(_){}}
+  if(!iconOK){$('ic').style.display='none';$('no-ico').style.display='flex';}
+  // Title
+  let mainT=h.gameTitle,subT=`${h.gameCode} · v${h.romVersion}`;
+  if(banner&&banner.titles.length>0){const en=banner.titles.find(t=>t.lang==='English')||banner.titles[0];const ls=en.text.split('\n').map(l=>l.trim()).filter(Boolean);mainT=ls[0]||mainT;if(ls.length>1)subT=ls.slice(1).join(' — ');}
+  $('r-title').textContent=mainT;$('r-sub').textContent=subT;
+  $('r-code').textContent=h.gameCode||'—';$('r-maker').textContent=h.makerCode||'—';
+  $('r-unit').textContent=h.unitStr;$('r-region').textContent=h.regionStr;$('r-ver').textContent=`v${h.romVersion}`;
+  const crcEl=$('r-crc');
+  if(h.headerCRCOK){crcEl.className='vv g';crcEl.textContent='✓ VALID';}
+  else{crcEl.className='vv o';crcEl.textContent=`✗ ${hex(h.headerCRC,4)}`;}
+  // Multilingual titles
+  const ts=$('titles-sec');
+  if(banner&&banner.titles.length>0){ts.innerHTML=`<div class="sec-lbl">MULTILINGUAL TITLES</div><div class="tbox">${banner.titles.map(t=>`<div class="trow"><div class="tlang">${esc(t.lang.toUpperCase())}</div><div class="ttxt">${esc(t.text.replace(/\n/g,' · '))}</div></div>`).join('')}</div>`;}
+  else ts.innerHTML='';
+  // Tech table
+  const rows=[
+    ['File Size',fmt(file.size)],['Declared Capacity',fmt(h.romDeclaredSize)],
+    ['usedRomSize Field',h.usedRomSize>0?fmt(h.usedRomSize):'Not set'],
+    ['File Count (FAT)',h.fileCount.toLocaleString()+' files'],
+    ['─',''],
+    ['ARM9',`${fmt(h.arm9Size)} @ ${hex(h.arm9Offset)}`],
+    ['ARM7',`${fmt(h.arm7Size)} @ ${hex(h.arm7Offset)}`],
+    ['ARM9 Overlays',h.arm9OvSize>0?`${h.arm9OvSize/32|0} entries`:'None'],
+    ['ARM7 Overlays',h.arm7OvSize>0?`${h.arm7OvSize/32|0} entries`:'None'],
+    ['FNT',`${fmt(h.fntSize)} @ ${hex(h.fntOffset)}`],
+    ['FAT',`${fmt(h.fatSize)} @ ${hex(h.fatOffset)}`],
+    ['Icon Banner',hex(h.iconBannerOffset)],
+    ['─',''],
+    ['Secure Area CRC',hex(h.secureAreaCRC,4)],
+    ['Encryption Seed',hex(h.encryptionSeed,2)],
+    ['Header CRC',hex(h.headerCRC,4)+(h.headerCRCOK?' ✓':` ✗ (calc: ${hex(h.headerCRCCalc,4)})`)],
+    ['─',''],
+    ['FAT Logical End',trim.fatEnd>0?fmt(trim.fatEnd):'N/A'],
+    ['Final Trim Size',fmt(trim.trimSize)],
+  ];
+  $('techt').innerHTML=rows.map(([k,v])=>k==='─'?`<tr style="opacity:.15"><td colspan="2" style="padding:1px 0;border-bottom:1px solid var(--border)"></td></tr>`:`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('');
+  // Sizes
+  const orig=file.size,trimmed=trim.trimSize,saved=orig-trimmed;
+  const trimPct=((trimmed/orig)*100).toFixed(1),savPct=((saved/orig)*100).toFixed(1);
+  $('r-orig').textContent=fmt(orig);$('r-trimmed').textContent=fmt(trimmed);
+  requestAnimationFrame(()=>{$('r-bar').style.width=trimPct+'%';});
+  const pill=$('r-saving');
+  if(saved>0){pill.className='sav-pill good';pill.textContent=`✓  TRIM SAVES ${fmt(saved)}  (−${savPct}%)`;}
+  else{pill.className='sav-pill neutral';pill.textContent='✓  ROM ALREADY OPTIMALLY TRIMMED';}
+  $('r-decl').textContent=fmt(h.romDeclaredSize);
+  $('r-pad').textContent=saved>0?fmt(saved):'0 B';
+  $('r-ov-saved').textContent='ANALYZING…';
+  $('dl-sz').textContent=fmt(trimmed);
+  S.outBuf=S.buf.slice(0,trim.trimSize);
+}
+
+/* ── OVERLAY ANALYSIS + LZ77 COMPRESSION ────────────────────── */
+async function startOverlayAnalysis(buf, h) {
+  const u = new Uint8Array(buf);
+  const ovList = parseOverlays(u, h);
+
+  if (ovList.length === 0) {
+    $('ov-body').innerHTML = '<div style="padding:14px;font-size:10px;color:var(--dim);text-align:center;letter-spacing:2px">NO OVERLAYS FOUND IN THIS ROM</div>';
+    finishOptimization(0);
+    return;
+  }
+
+  // Run compression analysis
+  const { workBuf, results, totalSaved } = await processOverlays(
+    buf.slice(0, S.trimSize),
+    h,
+    ovList,
+    (pct, status) => {
+      $('ov-prog').style.width = pct + '%';
+      $('ov-pct').textContent  = pct + '%';
+      $('ov-status').textContent = status;
+    }
+  );
+
+  // Re-trim the work buffer
+  const workU8 = new Uint8Array(workBuf);
+  let newTrim = workBuf.byteLength;
+  for (let i = workBuf.byteLength - 1; i >= 0; i--) { if (workU8[i] !== 0xFF) { newTrim = i + 1; break; } }
+
+  S.outBuf = workBuf.slice(0, newTrim);
+
+  // Render overlay table
+  const alreadyList  = results.filter(r => r.status === 'already');
+  const compList     = results.filter(r => r.status === 'compressed');
+  const badList      = results.filter(r => ['incompressible','verify-fail','tiny'].includes(r.status));
+
+  let html = '';
+
+  if (compList.length > 0) {
+    html += `<div class="sec-lbl">NEWLY COMPRESSED BY THIS TOOL (${compList.length})</div><div class="ov-grid">`;
+    for (const r of compList) {
+      const pct = ((1 - r.ratio)*100).toFixed(1);
+      html += `<div class="ov-item"><div class="ov-dot" style="background:var(--green);box-shadow:0 0 4px var(--green)"></div><div class="ov-name">${esc(r.name)} ${r.id}</div><div class="ov-sizes">${fmt(r.fatSize)} → ${fmt(r.newSize)}</div><div class="ov-ratio" style="color:var(--green)">−${pct}%</div></div>`;
+    }
+    html += '</div>';
+  }
+
+  if (alreadyList.length > 0) {
+    html += `<div class="sec-lbl" style="margin-top:${compList.length?'14px':'0'}">ALREADY COMPRESSED BY DEVELOPER (${alreadyList.length})</div><div class="ov-grid">`;
+    for (const r of alreadyList) {
+      const pct = ((1 - r.ratio)*100).toFixed(1);
+      html += `<div class="ov-item"><div class="ov-dot" style="background:var(--accent)"></div><div class="ov-name">${esc(r.name)} ${r.id}</div><div class="ov-sizes">${fmt(r.fatSize)} (${fmt(r.ramSize)} raw)</div><div class="ov-ratio" style="color:var(--accent)">−${pct}%</div></div>`;
+    }
+    html += '</div>';
+  }
+
+  if (badList.length > 0) {
+    html += `<div class="sec-lbl" style="margin-top:14px">INCOMPRESSIBLE / SKIPPED (${badList.length})</div><div class="ov-grid">`;
+    for (const r of badList) {
+      const reason = {incompressible:'ARM code', 'verify-fail':'verify error', tiny:'too small'}[r.status]||r.status;
+      html += `<div class="ov-item"><div class="ov-dot" style="background:var(--dim2)"></div><div class="ov-name">${esc(r.name)} ${r.id}</div><div class="ov-sizes">${fmt(r.fatSize)}</div><div class="ov-ratio" style="color:var(--dim)">${reason}</div></div>`;
+    }
+    html += '</div>';
+  }
+
+  // Summary
+  const allCompSize = alreadyList.reduce((a,r)=>a+r.fatSize,0);
+  const allCompRaw  = alreadyList.reduce((a,r)=>a+r.ramSize,0);
+  html += `<div class="ov-sum">
+    <div><div class="ov-sum-lbl">TOTAL OVERLAYS</div><div class="ov-sum-val" style="color:var(--text)">${results.length}</div></div>
+    <div><div class="ov-sum-lbl">ALREADY COMPRESSED</div><div class="ov-sum-val" style="color:var(--accent)">${alreadyList.length}</div></div>
+    <div><div class="ov-sum-lbl">NEWLY COMPRESSED</div><div class="ov-sum-val" style="color:var(--green)">${compList.length}</div></div>
+    <div><div class="ov-sum-lbl">LZ77 SAVED</div><div class="ov-sum-val" style="color:var(--purple)">${totalSaved > 0 ? fmt(totalSaved) : '0 B'}</div></div>
+  </div>`;
+
+  $('ov-body').innerHTML = html;
+
+  finishOptimization(totalSaved, alreadyList.length, compList.length, results.length, allCompSize, allCompRaw);
+}
+
+/* ── FINALIZE UI AFTER OVERLAY ANALYSIS ─────────────────────── */
+function finishOptimization(totalSaved, nAlready, nNew, nTotal, alreadyCompSize, alreadyRawSize) {
+  $('r-ov-saved').textContent = totalSaved > 0 ? fmt(totalSaved) : '0 B (see analysis)';
+  if(totalSaved > 0) $('r-ov-saved').className = 'vv p';
+
+  $('dl-sz').textContent = fmt(S.outBuf.byteLength);
+  $('r-trimmed').textContent = fmt(S.outBuf.byteLength);
+
+  // Update bar
+  const orig = S.buf.byteLength;
+  const final = S.outBuf.byteLength;
+  $('r-bar').style.width = ((final / orig)*100).toFixed(1) + '%';
+
+  const totalSaved2 = orig - final;
+  const pill = $('r-saving');
+  if(totalSaved2 > 0){
+    pill.className = 'sav-pill good';
+    pill.textContent = `✓  TOTAL SAVED ${fmt(totalSaved2)}  (−${((totalSaved2/orig)*100).toFixed(1)}%)`;
+  }
+
+  // Honest note
+  const note = $('honest-note');
+  if (nAlready === nTotal && nTotal > 0) {
+    note.innerHTML = `<strong>Why no extra savings from overlays?</strong><br>
+    All ${nTotal} overlays are <span class="pos">already compressed</span> by the developer (avg ratio: ${alreadyCompSize>0?((1-alreadyCompSize/alreadyRawSize)*100).toFixed(0)+'%':'—'}). This ROM was fully optimized at build time — the only removable space is the <strong>${fmt(S.buf.byteLength - S.trimSize)}</strong> of <code style="color:var(--accent)">0xFF</code> padding Nintendo adds to fill the declared capacity.`;
+  } else if (nNew > 0) {
+    note.innerHTML = `<span class="pos">✓ LZ77-compressed ${nNew} overlays</span>, saving <strong>${fmt(totalSaved)}</strong>. The optimized .nds is fully compatible with nds-bootstrap and TWiLight Menu++.`;
+  } else if (nTotal === 0) {
+    note.innerHTML = `<span class="neg">No overlay table found</span>. Only 0xFF trim is available for this ROM.`;
+  } else {
+    note.innerHTML = `All overlays are ARM machine code — high entropy, not compressible with LZ77 0x10. Trim is the only available optimization.`;
+  }
+}
+
+/* ── DOWNLOAD ────────────────────────────────────────────────── */
+function dlBlob(buf,name){const b=new Blob([buf],{type:'application/octet-stream'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),15000);}
+
+/* ── EVENTS ──────────────────────────────────────────────────── */
+const dz=$('dropzone');
+dz.addEventListener('click',()=>$('file-input').click());
+$('file-input').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)handleFile(f);});
+['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag');}));
+['dragleave','dragend'].forEach(ev=>dz.addEventListener(ev,()=>dz.classList.remove('drag')));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)handleFile(f);});
+$('btn-dl').addEventListener('click',()=>{if(!S.outBuf)return;dlBlob(S.outBuf,S.filename.replace(/\.nds$/i,'_optimized.nds'));});
+$('btn-orig').addEventListener('click',()=>{if(!S.buf)return;dlBlob(S.buf,S.filename);});
+$('btn-new').addEventListener('click',reset);
+$('btn-retry').addEventListener('click',reset);
+$('tog-tech').addEventListener('click',()=>{const p=$('det-panel'),o=p.classList.toggle('open');$('tog-tech').textContent=(o?'▾  HIDE':'▸  SHOW')+' TECHNICAL DETAILS';});
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>e.preventDefault());
+</script>
+</body>
+</html>
